@@ -64,6 +64,20 @@ final class WPPM_Meta {
 		?>
 		<div class="wppm-meta-grid">
 
+			<div class="wppm-field wppm-field--full wppm-autocomplete">
+				<label for="wppm_autocomplete"><?php esc_html_e( 'Vyhledat adresu (Google Places)', 'wp-places-map' ); ?></label>
+				<input type="text" id="wppm_autocomplete" placeholder="<?php esc_attr_e( 'začněte psát adresu — např. Jiráskova 12 Pardubice', 'wp-places-map' ); ?>" autocomplete="off" />
+				<p class="wppm-autocomplete-hint">
+					<span class="dashicons dashicons-lightbulb"></span>
+					<?php esc_html_e( 'Vyberte adresu z rozbalovacího seznamu — pole níže (ulice, město, PSČ, GPS) se vyplní automaticky a marker se posadí na přesné místo.', 'wp-places-map' ); ?>
+				</p>
+				<p id="wppm-autocomplete-status" class="wppm-validated" aria-live="polite" hidden></p>
+			</div>
+
+			<div class="wppm-section-sep" aria-hidden="true">
+				<span><?php esc_html_e( '— nebo zadejte ručně —', 'wp-places-map' ); ?></span>
+			</div>
+
 			<div class="wppm-field wppm-field--full">
 				<label for="wppm_address"><?php esc_html_e( 'Ulice a č.p.', 'wp-places-map' ); ?></label>
 				<input type="text" id="wppm_address" name="_wppm_address" value="<?php echo esc_attr( $values['_wppm_address'] ); ?>" placeholder="<?php esc_attr_e( 'např. Jiráskova 1320', 'wp-places-map' ); ?>" />

@@ -37,10 +37,13 @@ final class WPPM_Geocoder {
 
 		$url = add_query_arg(
 			[
-				'address'  => $address,
-				'key'      => $key,
-				'language' => 'cs',
-				'region'   => 'cz',
+				'address'    => $address,
+				'key'        => $key,
+				'language'   => 'cs',
+				'region'     => 'cz',
+				// Hard component filter — geocoder will only return matches inside Czech Republic.
+				// Without this, Google may quietly return a non-CZ "best match" for ambiguous input.
+				'components' => 'country:CZ',
 			],
 			self::ENDPOINT
 		);

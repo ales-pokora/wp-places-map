@@ -119,10 +119,95 @@
 			});
 	}
 
+	function findComponent(components, type) {
+		if (!Array.isArray(components)) return null;
+		return components.find(function (c) {
+			return Array.isArray(c.types) && c.types.indexOf(type) !== -1;
+		}) || null;
+	}
+
+	function compLong(components, type) {
+		const c = findComponent(components, type);
+		return c ? c.long_name : '';
+	}
+
+	function compShort(components, type) {
+		const c = findComponent(components, type);
+		return c ? c.short_name : '';
+	}
+
+	function showValidated(formatted) {
+		const el = $('wppm-autocomplete-status');
+		if (!el) return;
+		el.hidden = false;
+		el.innerHTML = '<span class="dashicons dashicons-yes-alt"></span> ' +
+			'Validovaná adresa Google Places: <strong></strong>';
+		// Inject as text to avoid HTML injection from address strings.
+		el.querySelector('strong').textContent = formatted || '';
+	}
+
+	function setVal(id, value) {
+		const el = $(id);
+		if (el) el.value = value == null ? '' : String(value);
+	}
+
+	function initAutocomplete() {
+		const input = $('wppm_autocomplete');
+		if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+
+		// Some browsers ignore autocomplete="off" — combat with a randomised name.
+		input.setAttribute('autocomplete', 'wppm-' + Math.random().toString(36).slice(2));
+
+		const ac = new google.maps.places.Autocomplete(input, {
+			fields: ['address_components', 'formatted_address', 'geometry', 'name', 'place_id'],
+			componentRestrictions: { country: 'cz' },
+			types: ['address'],
+		});
+
+		// Pull the bounds of any preview map already shown to bias suggestions toward that area.
+		ac.addListener('place_changed', function () {
+			const place = ac.getPlace();
+			if (!place || !place.geometry || !place.geometry.location) {
+				return; // user pressed Enter without picking a suggestion
+			}
+
+			const lat = place.geometry.location.lat();
+			const lng = place.geometry.location.lng();
+			const comp = place.address_components || [];
+
+			const route   = compLong(comp, 'route');
+			const number  = compShort(comp, 'street_number');
+			const city    = compLong(comp, 'locality') || compLong(comp, 'postal_town') || compLong(comp, 'administrative_area_level_2');
+			const zip     = (compLong(comp, 'postal_code') || '').replace(/^(\d{3})(\d{2})$/, '$1 $2');
+			const street  = [route, number].filter(Boolean).join(' ');
+
+			setVal('wppm_address', street || place.name || '');
+			setVal('wppm_city', city);
+			setVal('wppm_zip', zip);
+			setVal('wppm_lat', lat.toFixed(6));
+			setVal('wppm_lng', lng.toFixed(6));
+
+			ensureMap({ lat: lat, lng: lng });
+			if (map) map.setZoom(17);
+
+			showValidated(place.formatted_address || street + ', ' + city);
+
+			// Clear any stale "Dohledat GPS" status from previous manual flow.
+			const stat = $('wppm-geocode-status');
+			if (stat) statusMsg(stat, '', null);
+		});
+
+		// Prevent form submission when user hits Enter inside the autocomplete input.
+		input.addEventListener('keydown', function (e) {
+			if (e.key === 'Enter') e.preventDefault();
+		});
+	}
+
 	// Exposed as a callback target for the Google Maps loader.
 	window.WPPMAdmin_initMap = function () {
 		const existing = currentLatLng() || WPPMAdmin.defaultCenter;
 		if (existing) ensureMap(existing);
+		initAutocomplete();
 	};
 
 	document.addEventListener('DOMContentLoaded', function () {
@@ -138,5 +223,10 @@
 				if (c) ensureMap(c);
 			});
 		});
+
+		// If the Maps SDK initialised before DOMContentLoaded (cached), autocomplete may not be wired yet.
+		if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+			initAutocomplete();
+		}
 	});
 })();

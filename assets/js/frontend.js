@@ -150,15 +150,38 @@
 		const loading = wrap.querySelector('.wppm-loading');
 		if (!canvas) return;
 
-		const map = new google.maps.Map(canvas, {
-			center: config.center,
-			zoom: config.zoom,
-			styles: STYLES[config.mapStylePreset] || STYLES.light,
-			mapTypeControl: false,
-			streetViewControl: false,
-			fullscreenControl: true,
-			gestureHandling: 'cooperative',
-		});
+		function hideLoading() {
+			if (loading) loading.style.display = 'none';
+		}
+
+		function showError(err) {
+			if (loading) {
+				loading.innerHTML = '<span class="wppm-error-inline">' + config.i18n.error + '</span>';
+				loading.style.pointerEvents = 'auto';
+			}
+			if (window.console) window.console.error('[WPPM]', err);
+		}
+
+		if (typeof google === 'undefined' || !google.maps) {
+			showError(new Error('Google Maps SDK not available'));
+			return;
+		}
+
+		let map;
+		try {
+			map = new google.maps.Map(canvas, {
+				center: config.center,
+				zoom: config.zoom,
+				styles: STYLES[config.mapStylePreset] || STYLES.light,
+				mapTypeControl: false,
+				streetViewControl: false,
+				fullscreenControl: true,
+				gestureHandling: 'cooperative',
+			});
+		} catch (err) {
+			showError(err);
+			return;
+		}
 
 		const infoWindow = new google.maps.InfoWindow({ maxWidth: 320 });
 		const markerIcon = {
@@ -245,7 +268,7 @@
 			})
 			.then((data) => {
 				allFacilities = Array.isArray(data) ? data : [];
-				if (loading) loading.style.display = 'none';
+				hideLoading();
 				if (allFacilities.length === 0) {
 					canvas.insertAdjacentHTML(
 						'afterbegin',
@@ -253,14 +276,13 @@
 					);
 					return;
 				}
-				applyFilter(activeFilter);
-			})
-			.catch((err) => {
-				if (loading) {
-					loading.innerHTML = '<span class="wppm-error-inline">' + config.i18n.error + '</span>';
+				try {
+					applyFilter(activeFilter);
+				} catch (err) {
+					showError(err);
 				}
-				if (window.console) window.console.error('[WPPM]', err);
-			});
+			})
+			.catch(showError);
 	}
 
 	function flushPending() {

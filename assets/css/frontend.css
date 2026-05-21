@@ -121,15 +121,19 @@
 	gap: 12px;
 	color: var(--wppm-grey60);
 	font-size: 15px;
-	background: var(--wppm-cool);
+	background: rgba(245, 248, 250, 0.82);
+	backdrop-filter: blur(2px);
+	-webkit-backdrop-filter: blur(2px);
 	z-index: 2;
 	pointer-events: none;
+	transition: opacity 0.25s ease;
 }
 
 .wppm-empty {
 	pointer-events: auto;
 	padding: 24px;
 	text-align: center;
+	background: rgba(245, 248, 250, 0.9);
 }
 
 .wppm-spinner {

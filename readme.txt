@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,12 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.1 =
+* **Google Places Autocomplete** v editaci místa — typeahead s validovanými adresami z Google databáze. Při výběru se automaticky vyplní ulice / město / PSČ / přesné GPS souřadnice a marker se posadí na exaktní místo. Vyžaduje povolené **Places API** v Google Cloud Console (vedle Maps JS API a Geocoding API).
+* Serverový geocoder (fallback "Dohledat GPS z adresy" + CSV import) nově s `components=country:CZ` — striktně jen CZ shody, žádné "Pardubice, France".
+* Frontend hardening — `bootInstance` má try/catch wrapper, loading overlay se vždy zhasne i při chybě inicializace Google Maps SDK.
+* Loading / empty overlay je nyní semi-transparentní s blurem — mapový podklad prosvítá místo bílé plochy.
 
 = 1.0.0 =
 * První vydání. CPT, meta box, CSV import, shortcode, REST API, GitHub auto-update.
