@@ -1,0 +1,136 @@
+/* Places Map — admin styles */
+
+.wppm-meta-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px 18px;
+	padding: 6px 2px 2px;
+}
+
+.wppm-field--full {
+	grid-column: 1 / -1;
+}
+
+.wppm-field label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 4px;
+	color: #1B2B3A;
+	font-size: 13px;
+}
+
+.wppm-field input[type="text"],
+.wppm-field input[type="email"],
+.wppm-field input[type="url"],
+.wppm-field textarea {
+	width: 100%;
+	padding: 8px 10px;
+	border-radius: 6px;
+	border: 1px solid #c3c4c7;
+	background: #fff;
+	font-size: 14px;
+	transition: border-color .15s, box-shadow .15s;
+}
+
+.wppm-field input:focus,
+.wppm-field textarea:focus {
+	border-color: #41C8F4;
+	box-shadow: 0 0 0 1px #41C8F4;
+	outline: none;
+}
+
+.wppm-status {
+	display: inline-block;
+	margin-left: 10px;
+	font-size: 13px;
+	vertical-align: middle;
+}
+
+.wppm-status.is-ok { color: #1f8f4a; }
+.wppm-status.is-err { color: #b32d2e; }
+.wppm-status.is-pending { color: #647387; }
+
+.wppm-preview-map {
+	width: 100%;
+	height: 260px;
+	border-radius: 8px;
+	border: 1px solid #E8EBEF;
+	background: #F5F8FA;
+	margin-top: 4px;
+	overflow: hidden;
+}
+
+.wppm-preview-map:empty::before {
+	content: "Náhled mapy se zobrazí po zadání souřadnic nebo dohledání adresy.";
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	color: #647387;
+	font-size: 13px;
+	padding: 16px;
+	text-align: center;
+}
+
+/* Settings page */
+
+.wppm-settings-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 320px;
+	gap: 28px;
+	margin-top: 14px;
+}
+
+@media (max-width: 1100px) {
+	.wppm-settings-layout { grid-template-columns: 1fr; }
+}
+
+.wppm-settings-aside,
+.wppm-import-aside {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.wppm-card {
+	background: #fff;
+	border: 1px solid #E8EBEF;
+	border-radius: 12px;
+	padding: 18px;
+	box-shadow: 0 1px 0 rgba(0, 0, 0, .02);
+}
+
+.wppm-card h3 {
+	margin-top: 0;
+	margin-bottom: 10px;
+	font-size: 15px;
+	color: #1B2B3A;
+}
+
+.wppm-card p {
+	color: #647387;
+	font-size: 13px;
+	margin: 0 0 8px;
+}
+
+.wppm-snippet {
+	display: block;
+	padding: 8px 10px;
+	background: #F5F8FA;
+	border: 1px solid #E8EBEF;
+	border-radius: 6px;
+	font-size: 12.5px;
+	color: #1B2B3A;
+	word-break: break-all;
+}
+
+.wppm-import-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 320px;
+	gap: 28px;
+	margin-top: 14px;
+}
+
+@media (max-width: 1100px) {
+	.wppm-import-layout { grid-template-columns: 1fr; }
+}

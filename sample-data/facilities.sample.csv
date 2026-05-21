@@ -1,0 +1,6 @@
+title,type,address,city,zip,lat,lng,phone,email,website,hours,description
+Nemocnice Pardubického kraje – Pardubická nemocnice,nemocnice,Kyjevská 44,Pardubice,532 03,50.0438,15.7755,+420 466 011 111,info@nempk.cz,https://www.nempk.cz,"Pohotovost: 24/7","Krajská nemocnice s plnou škálou odborností."
+Fakultní nemocnice Hradec Králové,nemocnice,Sokolská 581,Hradec Králové,500 05,50.2049,15.8333,+420 495 831 111,info@fnhk.cz,https://www.fnhk.cz,"Pohotovost: 24/7","Univerzitní fakultní nemocnice."
+Praktický lékař MUDr. Novák,prakticky-lekar,Náměstí Republiky 12,Pardubice,530 02,50.0381,15.7793,+420 466 123 456,ordinace@novak.cz,https://www.lekar-novak.cz,"Po–Pá: 7:00–15:30","Praxe pro dospělé, předem objednání nutné."
+Ambulance kardiologie MUDr. Svobodová,ambulance,Masarykovo nám. 8,Hradec Králové,500 02,50.2104,15.8329,+420 495 222 333,kardio@svobodova.cz,,"Po, St: 8:00–14:00","Specializovaná kardiologická ambulance."
+Lékárna U Anděla,lekarna,Tylova 5,Praha 2,120 00,50.0735,14.4341,+420 224 920 920,info@lekarna-andel.cz,https://www.lekarna-andel.cz,"Po–Ne: 8:00–22:00","Pohotovostní lékárna v centru Prahy."
