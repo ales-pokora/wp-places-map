@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.12
+Stable tag: 1.0.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,9 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.13 =
+* Při výběru kraje se clustering vypíná — uvnitř regionu uživatel drillne pro detail, slučování blízkých markerů do "2" bubliny ten detail schovává. Pardubický se tvářil OK, protože jeho 2 místa jsou v různých městech (Chrudim, Pardubice) a neclusterovala se nikdy; Jihočeský s 2 místy ve stejném městě se slučoval, což působilo nekonzistentně.
 
 = 1.0.12 =
 * Region badge se nezobrazuje pro aktuálně vybraný kraj — duplikovala se s cluster bublinou v centru regionu. Chip nad mapou + clustery uvnitř kraje signál o aktivním kraji nesou, badge tam přebýval.

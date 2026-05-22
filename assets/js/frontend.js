@@ -576,7 +576,14 @@
 				markers.push(marker);
 			});
 
-			if (config.cluster && window.markerClusterer && markers.length > 1) {
+			// Clustering is disabled when a region is the active filter. Inside a kraj the
+			// user is drilling down — collapsing two nearby places into a "2" bubble hides
+			// exactly the detail they came for. (Pardubický's two places fall in separate
+			// towns so they never clustered to start with; Jihočeský's two are close enough
+			// to cluster at the zoom fitBounds picks, which is what made the behaviour look
+			// inconsistent.)
+			const allowCluster = config.cluster && !activeRegionFilter;
+			if (allowCluster && window.markerClusterer && markers.length > 1) {
 				cluster = new window.markerClusterer.MarkerClusterer({
 					map,
 					markers,
@@ -591,7 +598,7 @@
 				startGlowSchedulers();
 			} else if (markers.length) {
 				markers.forEach((m) => m.setMap(map));
-				// Single-marker maps: drop any halos that might be lingering.
+				// No clustering → drop any halos still on the map.
 				haloOverlays.forEach((h) => h.setMap(null));
 				haloOverlays = [];
 			}
