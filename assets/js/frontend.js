@@ -1005,6 +1005,10 @@
 		if (mapsReady) flushPending();
 	}
 
+	// If the defensive stub (added inline before the Maps SDK tag) already fired
+	// because we were 429'd / cached out of order, replay it now.
+	const stubAlreadyFired = window.__wppm_maps_ready === true;
+
 	window.WPPM_onMapsReady = function () {
 		mapsReady = true;
 		flushPending();
@@ -1014,5 +1018,10 @@
 		document.addEventListener('DOMContentLoaded', intakeAndStart);
 	} else {
 		intakeAndStart();
+	}
+
+	if (stubAlreadyFired) {
+		// google.maps is guaranteed to be loaded since the Maps SDK is what called the stub.
+		window.WPPM_onMapsReady();
 	}
 })();

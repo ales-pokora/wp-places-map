@@ -217,6 +217,14 @@ final class WPPM_Shortcode {
 			null,
 			true
 		);
+		// Defensive stub so the Maps SDK never errors with "WPPM_onMapsReady is not a function"
+		// if our frontend.js failed to load (e.g. server 429 / WAF blocking static assets).
+		// frontend.js, when it eventually loads, overwrites this stub and replays via the flag.
+		wp_add_inline_script(
+			self::HANDLE_GMAPS,
+			'window.WPPM_onMapsReady=window.WPPM_onMapsReady||function(){window.__wppm_maps_ready=true;};',
+			'before'
+		);
 		wp_enqueue_script( self::HANDLE_GMAPS );
 	}
 }

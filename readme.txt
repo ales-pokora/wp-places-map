@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.10
+Stable tag: 1.0.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,9 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.11 =
+* Defenzivní stub pro `WPPM_onMapsReady` se vloží inline před Maps SDK script tag. Když selže načtení `frontend.js` (typicky kvůli serverovému rate-limitu / WAF 429), Google Maps SDK už nevyhodí `InvalidValueError: WPPM_onMapsReady is not a function` — stub zachytí volání a nastaví flag. Když se `frontend.js` později dotáhne (cache, opakovaný request), přečte flag a replay missed callback. Plugin se tedy v degradovaném prostředí nerozbije s tvrdou chybou.
 
 = 1.0.10 =
 * Region badges (bílé kruhy s počtem) se skryjí ve výchozím "Vše" pohledu — bez aktivního filtru je distribuce už čitelná z cluster bublin, badge by jen duplikoval informaci a zaclonil mapu. Objeví se hned jak uživatel klikne na filtr typu, region nebo začne hledat.
