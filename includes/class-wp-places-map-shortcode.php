@@ -112,10 +112,13 @@ final class WPPM_Shortcode {
 				'placeCount'    => __( 'zařízení', 'wp-places-map' ),
 				'clearRegion'   => __( 'Zobrazit všechny kraje', 'wp-places-map' ),
 				'regionLabel'   => __( 'Kraj:', 'wp-places-map' ),
-				'searchPlace'   => __( 'Hledat zařízení (název, město, ulice)…', 'wp-places-map' ),
-				'searchClear'   => __( 'Zrušit hledání', 'wp-places-map' ),
-				'searchNoMatch' => __( 'Žádné zařízení neodpovídá hledání.', 'wp-places-map' ),
-				'resultsShown'  => __( 'Zobrazeno %1$d z %2$d zařízení', 'wp-places-map' ),
+				'searchPlace'         => __( 'Hledat zařízení (název, město, ulice)…', 'wp-places-map' ),
+				'searchClear'         => __( 'Zrušit hledání', 'wp-places-map' ),
+				'searchNoMatch'       => __( 'Žádné zařízení neodpovídá hledání.', 'wp-places-map' ),
+				'resultsShown'        => __( 'Zobrazeno %1$d z %2$d zařízení', 'wp-places-map' ),
+				'noFilterResults'     => __( 'V tomto výběru nejsou žádná zařízení', 'wp-places-map' ),
+				'noFilterResultsHint' => __( 'Zkuste jiný kraj, jiný typ, nebo zrušte filtry.', 'wp-places-map' ),
+				'clearFilters'        => __( 'Zrušit filtry', 'wp-places-map' ),
 			],
 		];
 

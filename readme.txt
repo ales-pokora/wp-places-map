@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.6
+Stable tag: 1.0.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,10 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.7 =
+* **Filter pillky se přepočítávají dle vybraného kraje** — počet vedle "Lékárna", "Nemocnice" atd. se mění podle aktivního kraje + vyhledávacího dotazu. Typ s 0 výsledky se vizuálně ztlumí + jeho počet zčervená, takže prázdný stav je hned zřejmý (pomáhá rozlišit "Praha vs. Středočeský kraj" — Praha je samostatný NUTS3 region, ne součást Středočeského).
+* **Overlay "Žádné zařízení v tomto výběru"** s tlačítkem **Zrušit filtry** se zobrazí, když kombinace typ + kraj + hledání nevrátí žádné markery. Jeden klik vrátí výchozí CZ-wide pohled a vyčistí všechny filtry.
 
 = 1.0.6 =
 * Cluster bublina je teď plně plochý cyan kruh — odstraněn radial-gradient highlight uvnitř SVG. Číslo na čistém pozadí, dynamický pulse halo zůstává a teď drží veškerou vizuální energii.
