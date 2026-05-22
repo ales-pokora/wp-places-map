@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,11 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.3 =
+* **Fulltextové hledání** nad mapou — diakritiku-insenzitivní substring match přes název, město, ulici, PSČ, typ a popis. Kombinuje se s filtrem typu i filtrem kraje. Pole lze vypnout v nastavení.
+* **CZ-wide výchozí pohled** — mapa se už při načtení automaticky nepřibližuje na markery; respektuje konfigurovaný střed (49.7437, 15.3386) a zoom 7. Auto-zoom se použije pouze při kliknutí na kraj.
+* **Auto-backfill defaultů** — nové klíče v nastavení (například `show_regions` ve verzi 1.0.2) jsou nyní honorovány na existujících instalacích bez re-aktivace. Fix pro: po updatu z 1.0.1 → 1.0.2 se kraje nezobrazily, protože defaultní `show_regions=1` nebyl aplikován na již existující záznam v `wp_options`.
 
 = 1.0.2 =
 * **Interaktivní kraje ČR** — 14 krajů se vykresluje jako prosvítavá vrstva nad mapou (defaultně zapnuto). Najetí myší kraj zvýrazní a ukáže tooltip s názvem a počtem zařízení v něm; kliknutím se mapa přiblíží na kraj a markery se zfiltrují jen na zařízení v něm. Druhý klik / "×" chip filter zruší.

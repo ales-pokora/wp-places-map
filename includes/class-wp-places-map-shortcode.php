@@ -43,6 +43,7 @@ final class WPPM_Shortcode {
 			'filters' => ( ! empty( $settings['show_filters'] ) ) ? 'yes' : 'no',
 			'cluster' => ( ! empty( $settings['cluster'] ) ) ? 'yes' : 'no',
 			'regions' => ( ! empty( $settings['show_regions'] ) ) ? 'yes' : 'no',
+			'search'  => ( ! empty( $settings['show_search'] ) ) ? 'yes' : 'no',
 			'class'   => '',
 		], $atts, 'wp_places_map' );
 
@@ -96,20 +97,25 @@ final class WPPM_Shortcode {
 			'regions'        => $this->bool( $atts['regions'] ),
 			'regionsUrl'     => esc_url_raw( WPPM_URL . 'assets/geojson/cz-kraje.geojson' ),
 			'regionColor'    => $settings['region_color'] ?? '#41C8F4',
+			'search'         => $this->bool( $atts['search'] ),
 			'i18n'           => [
-				'all'         => __( 'Vše', 'wp-places-map' ),
-				'loading'     => __( 'Načítám zařízení…', 'wp-places-map' ),
-				'empty'       => __( 'Zatím nejsou k dispozici žádná zařízení.', 'wp-places-map' ),
-				'error'       => __( 'Mapu se nepodařilo načíst.', 'wp-places-map' ),
-				'phone'       => __( 'Telefon', 'wp-places-map' ),
-				'email'       => __( 'E-mail', 'wp-places-map' ),
-				'web'         => __( 'Web', 'wp-places-map' ),
-				'hours'       => __( 'Otevírací doba', 'wp-places-map' ),
-				'navigate'    => __( 'Navigovat', 'wp-places-map' ),
-				'placesCount' => __( 'zařízení', 'wp-places-map' ),
-				'placeCount'  => __( 'zařízení', 'wp-places-map' ),
-				'clearRegion' => __( 'Zobrazit všechny kraje', 'wp-places-map' ),
-				'regionLabel' => __( 'Kraj:', 'wp-places-map' ),
+				'all'           => __( 'Vše', 'wp-places-map' ),
+				'loading'       => __( 'Načítám zařízení…', 'wp-places-map' ),
+				'empty'         => __( 'Zatím nejsou k dispozici žádná zařízení.', 'wp-places-map' ),
+				'error'         => __( 'Mapu se nepodařilo načíst.', 'wp-places-map' ),
+				'phone'         => __( 'Telefon', 'wp-places-map' ),
+				'email'         => __( 'E-mail', 'wp-places-map' ),
+				'web'           => __( 'Web', 'wp-places-map' ),
+				'hours'         => __( 'Otevírací doba', 'wp-places-map' ),
+				'navigate'      => __( 'Navigovat', 'wp-places-map' ),
+				'placesCount'   => __( 'zařízení', 'wp-places-map' ),
+				'placeCount'    => __( 'zařízení', 'wp-places-map' ),
+				'clearRegion'   => __( 'Zobrazit všechny kraje', 'wp-places-map' ),
+				'regionLabel'   => __( 'Kraj:', 'wp-places-map' ),
+				'searchPlace'   => __( 'Hledat zařízení (název, město, ulice)…', 'wp-places-map' ),
+				'searchClear'   => __( 'Zrušit hledání', 'wp-places-map' ),
+				'searchNoMatch' => __( 'Žádné zařízení neodpovídá hledání.', 'wp-places-map' ),
+				'resultsShown'  => __( 'Zobrazeno %1$d z %2$d zařízení', 'wp-places-map' ),
 			],
 		];
 
@@ -124,19 +130,33 @@ final class WPPM_Shortcode {
 		ob_start();
 		?>
 		<div class="<?php echo esc_attr( $classes ); ?>" id="<?php echo esc_attr( $id ); ?>" data-wppm data-instance="<?php echo esc_attr( $id ); ?>">
-			<?php if ( ! empty( $terms ) ) : ?>
-				<div class="wppm-filters" role="tablist" aria-label="<?php esc_attr_e( 'Filtrovat typ zařízení', 'wp-places-map' ); ?>">
-					<button type="button" class="wppm-filter is-active" role="tab" aria-selected="true" data-filter="">
-						<?php esc_html_e( 'Vše', 'wp-places-map' ); ?>
-					</button>
-					<?php foreach ( $terms as $term ) : ?>
-						<button type="button" class="wppm-filter" role="tab" aria-selected="false" data-filter="<?php echo esc_attr( $term['slug'] ); ?>">
-							<?php echo esc_html( $term['label'] ); ?>
-							<span class="wppm-filter-count"><?php echo esc_html( $term['count'] ); ?></span>
+
+			<div class="wppm-controls">
+				<?php if ( $this->bool( $atts['search'] ) ) : ?>
+					<div class="wppm-search" role="search">
+						<svg class="wppm-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<circle cx="11" cy="11" r="7"/>
+							<line x1="21" y1="21" x2="16.65" y2="16.65"/>
+						</svg>
+						<input type="search" class="wppm-search-input" placeholder="<?php esc_attr_e( 'Hledat zařízení (název, město, ulice)…', 'wp-places-map' ); ?>" aria-label="<?php esc_attr_e( 'Hledat zařízení', 'wp-places-map' ); ?>" autocomplete="off" />
+						<button type="button" class="wppm-search-clear" aria-label="<?php esc_attr_e( 'Zrušit hledání', 'wp-places-map' ); ?>" hidden>×</button>
+					</div>
+				<?php endif; ?>
+
+				<?php if ( ! empty( $terms ) ) : ?>
+					<div class="wppm-filters" role="tablist" aria-label="<?php esc_attr_e( 'Filtrovat typ zařízení', 'wp-places-map' ); ?>">
+						<button type="button" class="wppm-filter is-active" role="tab" aria-selected="true" data-filter="">
+							<?php esc_html_e( 'Vše', 'wp-places-map' ); ?>
 						</button>
-					<?php endforeach; ?>
-				</div>
-			<?php endif; ?>
+						<?php foreach ( $terms as $term ) : ?>
+							<button type="button" class="wppm-filter" role="tab" aria-selected="false" data-filter="<?php echo esc_attr( $term['slug'] ); ?>">
+								<?php echo esc_html( $term['label'] ); ?>
+								<span class="wppm-filter-count"><?php echo esc_html( $term['count'] ); ?></span>
+							</button>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+			</div>
 
 			<div class="wppm-canvas" style="height: <?php echo (int) $atts['height']; ?>px;">
 				<div class="wppm-loading" aria-live="polite">

@@ -25,12 +25,37 @@ final class WPPM_Settings {
 		add_action( 'admin_init', [ $this, 'register' ] );
 	}
 
+	/**
+	 * Defaults baked in here so any new setting added in a future version is honoured
+	 * on existing installs without having to re-activate the plugin.
+	 */
+	public static function defaults() {
+		return [
+			'api_key'       => '',
+			'default_lat'   => '49.7437',  // Czech Republic centroid
+			'default_lng'   => '15.3386',
+			'default_zoom'  => 7,
+			'brand_color'   => '#41C8F4',
+			'cluster_color' => '#41C8F4',
+			'map_style'     => 'light',
+			'show_filters'  => 1,
+			'cluster'       => 1,
+			'height'        => 600,
+			'preserve_data' => 1,
+			'github_token'  => '',
+			'show_regions'  => 1,
+			'region_color'  => '#41C8F4',
+			'show_search'   => 1,
+		];
+	}
+
 	public static function get( $key = null, $default = null ) {
-		$opts = (array) get_option( WPPM_OPT, [] );
+		$stored = (array) get_option( WPPM_OPT, [] );
+		$opts   = array_merge( self::defaults(), $stored );
 		if ( $key === null ) {
 			return $opts;
 		}
-		return isset( $opts[ $key ] ) ? $opts[ $key ] : $default;
+		return array_key_exists( $key, $opts ) ? $opts[ $key ] : $default;
 	}
 
 	public function menu() {
@@ -77,6 +102,7 @@ final class WPPM_Settings {
 		$out['github_token']  = isset( $input['github_token'] ) ? sanitize_text_field( $input['github_token'] ) : '';
 		$out['show_regions']  = ! empty( $input['show_regions'] ) ? 1 : 0;
 		$out['region_color']  = $this->color( $input['region_color'] ?? '', '#41C8F4' );
+		$out['show_search']   = ! empty( $input['show_search'] ) ? 1 : 0;
 
 		delete_transient( WPPM_CACHE_KEY );
 		return $out;
@@ -200,6 +226,15 @@ final class WPPM_Settings {
 								<label>
 									<input type="checkbox" name="<?php echo esc_attr( WPPM_OPT ); ?>[show_filters]" value="1" <?php checked( ! empty( $opts['show_filters'] ) ); ?> />
 									<?php esc_html_e( 'Zobrazit tlačítka pro filtraci nad mapou', 'wp-places-map' ); ?>
+								</label>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Fulltextové hledání', 'wp-places-map' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="<?php echo esc_attr( WPPM_OPT ); ?>[show_search]" value="1" <?php checked( ! empty( $opts['show_search'] ) ); ?> />
+									<?php esc_html_e( 'Zobrazit vyhledávací pole nad mapou (název / město / adresa)', 'wp-places-map' ); ?>
 								</label>
 							</td>
 						</tr>

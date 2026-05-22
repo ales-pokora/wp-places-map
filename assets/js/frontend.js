@@ -197,6 +197,16 @@
 		let cluster = null;
 		let activeFilter = config.typeFilter || '';
 		let activeRegionFilter = '';
+		let activeQuery = '';
+
+		// Diacritic-insensitive lowercase for fuzzy text matching.
+		// "Pardubické" and "Pardubicke" both normalise to "pardubicke".
+		function normalize(s) {
+			return String(s == null ? '' : s)
+				.toLowerCase()
+				.normalize('NFD')
+				.replace(/[̀-ͯ]/g, '');
+		}
 
 		// Tooltip element for region hover.
 		const tooltip = document.createElement('div');
@@ -254,18 +264,10 @@
 			regionBar.querySelector('.wppm-region-bar-name').textContent = name;
 			regionBar.querySelector('.wppm-region-bar-clear').addEventListener('click', function () {
 				applyFilter(activeFilter, '');
-				if (allRegions) {
-					// Refit to all markers when clearing region.
-					const filtered = filterFacilities(activeFilter, '');
-					if (filtered.length > 1) {
-						const bounds = new google.maps.LatLngBounds();
-						filtered.forEach((f) => bounds.extend({ lat: f.lat, lng: f.lng }));
-						map.fitBounds(bounds, 64);
-					} else {
-						map.setCenter(config.center);
-						map.setZoom(config.zoom);
-					}
-				}
+				renderRegionBar('', '');
+				// Always restore the CZ-wide configured view when the user clears a region.
+				map.setCenter(config.center);
+				map.setZoom(config.zoom);
 			});
 		}
 
@@ -311,28 +313,27 @@
 				markers.forEach((m) => m.setMap(map));
 			}
 
-			// Fit bounds to markers when we have them; otherwise honour configured center/zoom.
-			if (markers.length === 1) {
-				map.setCenter(markers[0].getPosition());
-				if (map.getZoom() < 12) map.setZoom(12);
-			} else if (markers.length > 1) {
-				const bounds = new google.maps.LatLngBounds();
-				markers.forEach((m) => bounds.extend(m.getPosition()));
-				map.fitBounds(bounds, 64);
-			}
+			// Keep the configured CZ-wide view by default. fitBounds is only triggered
+			// explicitly by region clicks (see initRegionLayer) or when the user clears
+			// a region filter — never on the initial render or generic filter change.
 		}
 
-		function filterFacilities(typeSlug, regionSlug) {
-			let out = allFacilities.slice();
+		function filterFacilities(typeSlug, regionSlug, query) {
+			let out = allFacilities;
 			if (typeSlug) out = out.filter((f) => f.type === typeSlug);
 			if (regionSlug) out = out.filter((f) => f.region === regionSlug);
+			if (query) {
+				const q = normalize(query);
+				out = out.filter((f) => (f._haystack || '').indexOf(q) !== -1);
+			}
 			return out;
 		}
 
-		function applyFilter(typeSlug, regionSlug) {
+		function applyFilter(typeSlug, regionSlug, query) {
 			activeFilter = typeSlug || '';
 			activeRegionFilter = regionSlug != null ? regionSlug : activeRegionFilter;
-			renderMarkers(filterFacilities(activeFilter, activeRegionFilter));
+			if (query != null) activeQuery = query;
+			renderMarkers(filterFacilities(activeFilter, activeRegionFilter, activeQuery));
 		}
 
 		// Filter button wiring.
@@ -344,9 +345,32 @@
 					b.classList.toggle('is-active', b === btn);
 					b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
 				});
-				applyFilter(slug, activeRegionFilter);
+				applyFilter(slug, activeRegionFilter, activeQuery);
 			});
 		});
+
+		// Search input wiring (debounced).
+		const searchInput = wrap.querySelector('.wppm-search-input');
+		const searchClear = wrap.querySelector('.wppm-search-clear');
+		if (searchInput) {
+			let timer = null;
+			searchInput.addEventListener('input', () => {
+				if (timer) clearTimeout(timer);
+				timer = setTimeout(() => {
+					const q = searchInput.value.trim();
+					if (searchClear) searchClear.hidden = q.length === 0;
+					applyFilter(activeFilter, activeRegionFilter, q);
+				}, 120);
+			});
+			if (searchClear) {
+				searchClear.addEventListener('click', () => {
+					searchInput.value = '';
+					searchClear.hidden = true;
+					applyFilter(activeFilter, activeRegionFilter, '');
+					searchInput.focus();
+				});
+			}
+		}
 
 		// --- Czech regions overlay -----------------------------------------
 
@@ -458,6 +482,17 @@
 			})
 			.then((data) => {
 				allFacilities = Array.isArray(data) ? data : [];
+				// Pre-compute normalised haystack for fast diacritic-insensitive search.
+				allFacilities.forEach((f) => {
+					f._haystack = normalize([
+						f.title,
+						f.city,
+						f.address,
+						f.zip,
+						f.type_label,
+						f.description,
+					].filter(Boolean).join(' • '));
+				});
 			});
 
 		const regionsPromise = config.regions
