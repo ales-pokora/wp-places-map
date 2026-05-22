@@ -618,6 +618,7 @@
 			if (query != null) activeQuery = query;
 			renderMarkers(filterFacilities(activeFilter, activeRegionFilter, activeQuery));
 			refreshFilterPillCounts();
+			buildRegionBadges();
 		}
 
 		// Compute how many places remain *for each type* given the current region+query filters,
@@ -787,27 +788,124 @@
 			});
 
 			map.data.addListener('click', (e) => {
-				const slug = e.feature.getProperty('slug');
-				const name = e.feature.getProperty('name');
-				if (activeRegionFilter === slug) {
-					// Toggle off — clear selection and filter.
-					applyFilter(activeFilter, '');
-					renderRegionBar('', '');
-					clearSelectedRegion();
-				} else {
-					// Clear previously selected region's highlight before switching.
-					clearSelectedRegion();
-					applyFilter(activeFilter, slug);
-					renderRegionBar(slug, name);
-					selectedFeature = e.feature;
-					applySelected(selectedFeature);
-					const bounds = new google.maps.LatLngBounds();
-					allRegions[slug].polys.forEach((p) => {
-						p.getPath().forEach((latLng) => bounds.extend(latLng));
-					});
-					map.fitBounds(bounds, 48);
-				}
+				activateRegion(e.feature.getProperty('slug'));
 			});
+		}
+
+		// --- Per-region count badges at centroids ------------------------
+		//
+		// Small outlined cyan circles at each kraj centroid showing how many
+		// places of the current type+search filter live in that region.
+		// Persist regardless of zoom/region selection so users can spot
+		// "Pardubický has 3, Jihomoravský has 7" at a glance even while
+		// zoomed into a different kraj.
+
+		let regionBadges = [];
+
+		function regionBadgeSvg(count, color, isSelected) {
+			const size = 38;
+			const r = (size / 2) - 3;
+			const fillCol = isSelected ? color : '#ffffff';
+			const textCol = isSelected ? '#ffffff' : color;
+			const strokeWidth = isSelected ? 0 : 2;
+			return window.btoa(
+				'<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+					'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="' + fillCol + '" stroke="' + color + '" stroke-width="' + strokeWidth + '"/>' +
+					'<text x="50%" y="50%" dy=".34em" text-anchor="middle" fill="' + textCol + '" ' +
+						'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" ' +
+						'font-size="14" font-weight="700">' + count + '</text>' +
+				'</svg>'
+			);
+		}
+
+		function regionCentroid(slug) {
+			const polys = (allRegions[slug] || {}).polys || [];
+			if (polys.length === 0) return null;
+			const bounds = new google.maps.LatLngBounds();
+			polys.forEach((p) => p.getPath().forEach((latLng) => bounds.extend(latLng)));
+			return bounds.getCenter();
+		}
+
+		function buildRegionBadges() {
+			regionBadges.forEach((b) => b.setMap(null));
+			regionBadges = [];
+			if (!allRegions) return;
+
+			// Compute counts reflecting the active type + search filter,
+			// but NOT the region filter (otherwise the selected region would
+			// always show the total and the others would all show 0).
+			const counts = {};
+			allFacilities.forEach((f) => {
+				if (activeFilter && f.type !== activeFilter) return;
+				if (activeQuery) {
+					const q = normalize(activeQuery);
+					if ((f._haystack || '').indexOf(q) === -1) return;
+				}
+				if (!f.region) return;
+				counts[f.region] = (counts[f.region] || 0) + 1;
+			});
+
+			Object.keys(allRegions).forEach((slug) => {
+				const count = counts[slug] || 0;
+				if (count === 0) return;
+				const center = regionCentroid(slug);
+				if (!center) return;
+
+				const isSelected = (slug === activeRegionFilter);
+				const size = 38;
+				const marker = new google.maps.Marker({
+					position: center,
+					icon: {
+						url: 'data:image/svg+xml;base64,' + regionBadgeSvg(count, config.regionColor, isSelected),
+						scaledSize: new google.maps.Size(size, size),
+						anchor: new google.maps.Point(size / 2, size / 2),
+					},
+					zIndex: 40,
+					title: allRegions[slug].name + ' — ' + count + ' ' + (count === 1 ? config.i18n.placeCount : config.i18n.placesCount),
+					cursor: 'pointer',
+				});
+				marker.addListener('click', () => activateRegion(slug));
+				marker.setMap(map);
+				regionBadges.push(marker);
+			});
+		}
+
+		// Shared logic between clicking the kraj polygon and clicking a count badge.
+		function activateRegion(slug) {
+			const region = allRegions[slug];
+			if (!region) return;
+
+			// Locate the matching Data Layer feature so we can apply/clear the selected style.
+			let targetFeature = null;
+			map.data.forEach((f) => {
+				if (f.getProperty('slug') === slug) targetFeature = f;
+			});
+
+			if (activeRegionFilter === slug) {
+				// Toggle off
+				applyFilter(activeFilter, '');
+				renderRegionBar('', '');
+				clearSelectedRegion();
+				return;
+			}
+
+			clearSelectedRegion();
+			applyFilter(activeFilter, slug);
+			renderRegionBar(slug, region.name);
+			if (targetFeature) {
+				selectedFeature = targetFeature;
+				try { map.data.overrideStyle(selectedFeature, {
+					fillColor: config.regionColor,
+					fillOpacity: 0.32,
+					strokeColor: config.regionColor,
+					strokeWeight: 3,
+					strokeOpacity: 1,
+					zIndex: 60,
+				}); } catch (e) { /* noop */ }
+			}
+			const bounds = new google.maps.LatLngBounds();
+			region.polys.forEach((p) => p.getPath().forEach((latLng) => bounds.extend(latLng)));
+			map.fitBounds(bounds, 48);
 		}
 
 		// --- Boot: load facilities + regions in parallel --------------------
@@ -866,6 +964,7 @@
 				try {
 					renderMarkers(filterFacilities(activeFilter, activeRegionFilter, activeQuery));
 					refreshFilterPillCounts();
+					buildRegionBadges();
 				} catch (err) {
 					showError(err);
 				}

@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.8
+Stable tag: 1.0.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,11 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.9 =
+* **Permanentní počty na krajích.** Menší cyan kruhy (38 px, bílá výplň, cyan outline + číslo) sedí v centroidu každého kraje a ukazují počet zařízení v tom kraji. Zůstávají vidět i když je nějaký kraj vybraný a mapa je zazoomovaná — uživatel hned vidí "Pardubický 3, Jihomoravský 7" a může klikem skočit jinam. Aktuálně vybraný kraj má badge vyplněnou cyan jako vizuální signál.
+* Počty v badge reflektují aktivní typ + hledání (ale ne region filter), takže při filtrování "Lékárna" je vidět kde jaké lékárny v krajích leží.
+* Klik na badge = klik na polygon kraje (sjednoceno do shared `activateRegion()` helperu).
 
 = 1.0.8 =
 * **Praha sloučena do Středočeského kraje.** GeoJSON přepočítán z 14 na 13 features geometrickým sjednocením polygonů Praha (CZ010) + Středočeský (CZ020). Místa v Praze se teď klasifikují jako Středočeský kraj, kliknutí na region "Středočeský" zobrazí všechna pražská i středočeská zařízení dohromady.
