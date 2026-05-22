@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.9
+Stable tag: 1.0.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,9 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.10 =
+* Region badges (bílé kruhy s počtem) se skryjí ve výchozím "Vše" pohledu — bez aktivního filtru je distribuce už čitelná z cluster bublin, badge by jen duplikoval informaci a zaclonil mapu. Objeví se hned jak uživatel klikne na filtr typu, region nebo začne hledat.
 
 = 1.0.9 =
 * **Permanentní počty na krajích.** Menší cyan kruhy (38 px, bílá výplň, cyan outline + číslo) sedí v centroidu každého kraje a ukazují počet zařízení v tom kraji. Zůstávají vidět i když je nějaký kraj vybraný a mapa je zazoomovaná — uživatel hned vidí "Pardubický 3, Jihomoravský 7" a může klikem skočit jinam. Aktuálně vybraný kraj má badge vyplněnou cyan jako vizuální signál.

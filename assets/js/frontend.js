@@ -831,6 +831,12 @@
 			regionBadges = [];
 			if (!allRegions) return;
 
+			// Badges are an overview *aid* while filtering. In the default
+			// "all places, all regions" view the cluster bubbles already
+			// convey distribution — extra white badges duplicate info and
+			// crowd the map. Show only when something is being filtered.
+			if (!activeFilter && !activeRegionFilter && !activeQuery) return;
+
 			// Compute counts reflecting the active type + search filter,
 			// but NOT the region filter (otherwise the selected region would
 			// always show the total and the others would all show 0).
