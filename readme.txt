@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,13 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.2 =
+* **Interaktivní kraje ČR** — 14 krajů se vykresluje jako prosvítavá vrstva nad mapou (defaultně zapnuto). Najetí myší kraj zvýrazní a ukáže tooltip s názvem a počtem zařízení v něm; kliknutím se mapa přiblíží na kraj a markery se zfiltrují jen na zařízení v něm. Druhý klik / "×" chip filter zruší.
+* Filtry typu zařízení a filtr kraje pracují kombinovaně (např. "Praktický lékař" v "Pardubickém kraji").
+* Bundlovaná GeoJSON vrstva krajů (40 KB, zjednodušená) — žádné externí volání, žádné CDN.
+* V nastavení nová sekce "Kraje ČR" — toggle + barva.
+* Shortcode má nový atribut `regions="yes|no"` pro override per stránku.
 
 = 1.0.1 =
 * **Google Places Autocomplete** v editaci místa — typeahead s validovanými adresami z Google databáze. Při výběru se automaticky vyplní ulice / město / PSČ / přesné GPS souřadnice a marker se posadí na exaktní místo. Vyžaduje povolené **Places API** v Google Cloud Console (vedle Maps JS API a Geocoding API).

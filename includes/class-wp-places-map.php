@@ -55,6 +55,8 @@ final class WPPM_Plugin {
 			'cluster'         => 1,
 			'height'          => 600,
 			'preserve_data'   => 1, // keep CPT entries when plugin is uninstalled
+			'show_regions'    => 1, // Czech regions overlay on by default
+			'region_color'    => '#41C8F4',
 		];
 		if ( ! get_option( WPPM_OPT ) ) {
 			add_option( WPPM_OPT, $defaults );

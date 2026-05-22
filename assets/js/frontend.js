@@ -191,9 +191,89 @@
 		};
 
 		let allFacilities = [];
+		let allRegions = null; // { slug: { name, polys: [google.maps.Polygon] } }
+		let regionCounts = {};
 		let markers = [];
 		let cluster = null;
 		let activeFilter = config.typeFilter || '';
+		let activeRegionFilter = '';
+
+		// Tooltip element for region hover.
+		const tooltip = document.createElement('div');
+		tooltip.className = 'wppm-tooltip';
+		tooltip.hidden = true;
+		canvas.appendChild(tooltip);
+
+		// Active-region chip above the map ("Kraj: Pardubický × Clear").
+		const regionBar = document.createElement('div');
+		regionBar.className = 'wppm-region-bar';
+		regionBar.hidden = true;
+		wrap.insertBefore(regionBar, wrap.querySelector('.wppm-canvas'));
+
+		// Track DOM mouse position over the map for tooltip placement.
+		let mouseX = 0, mouseY = 0;
+		canvas.addEventListener('mousemove', function (e) {
+			const r = canvas.getBoundingClientRect();
+			mouseX = e.clientX - r.left;
+			mouseY = e.clientY - r.top;
+			if (!tooltip.hidden) positionTooltip();
+		}, { passive: true });
+
+		function positionTooltip() {
+			const r = canvas.getBoundingClientRect();
+			const tw = tooltip.offsetWidth;
+			const th = tooltip.offsetHeight;
+			let x = mouseX + 14;
+			let y = mouseY + 14;
+			if (x + tw > r.width - 8) x = mouseX - tw - 14;
+			if (y + th > r.height - 8) y = mouseY - th - 14;
+			tooltip.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+		}
+
+		function showTooltip(html) {
+			tooltip.innerHTML = html;
+			tooltip.hidden = false;
+			positionTooltip();
+		}
+
+		function hideTooltip() {
+			tooltip.hidden = true;
+		}
+
+		function renderRegionBar(slug, name) {
+			if (!slug) {
+				regionBar.hidden = true;
+				regionBar.innerHTML = '';
+				return;
+			}
+			regionBar.hidden = false;
+			regionBar.innerHTML =
+				'<span class="wppm-region-bar-label">' + escapeHtmlSafe(config.i18n.regionLabel) + '</span>' +
+				'<strong class="wppm-region-bar-name"></strong>' +
+				'<button type="button" class="wppm-region-bar-clear" aria-label="' + escapeHtmlSafe(config.i18n.clearRegion) + '">×</button>';
+			regionBar.querySelector('.wppm-region-bar-name').textContent = name;
+			regionBar.querySelector('.wppm-region-bar-clear').addEventListener('click', function () {
+				applyFilter(activeFilter, '');
+				if (allRegions) {
+					// Refit to all markers when clearing region.
+					const filtered = filterFacilities(activeFilter, '');
+					if (filtered.length > 1) {
+						const bounds = new google.maps.LatLngBounds();
+						filtered.forEach((f) => bounds.extend({ lat: f.lat, lng: f.lng }));
+						map.fitBounds(bounds, 64);
+					} else {
+						map.setCenter(config.center);
+						map.setZoom(config.zoom);
+					}
+				}
+			});
+		}
+
+		function escapeHtmlSafe(s) {
+			return String(s == null ? '' : s)
+				.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+		}
 
 		function clearMarkers() {
 			if (cluster) {
@@ -242,10 +322,17 @@
 			}
 		}
 
-		function applyFilter(slug) {
-			activeFilter = slug || '';
-			const filtered = activeFilter ? allFacilities.filter((f) => f.type === activeFilter) : allFacilities.slice();
-			renderMarkers(filtered);
+		function filterFacilities(typeSlug, regionSlug) {
+			let out = allFacilities.slice();
+			if (typeSlug) out = out.filter((f) => f.type === typeSlug);
+			if (regionSlug) out = out.filter((f) => f.region === regionSlug);
+			return out;
+		}
+
+		function applyFilter(typeSlug, regionSlug) {
+			activeFilter = typeSlug || '';
+			activeRegionFilter = regionSlug != null ? regionSlug : activeRegionFilter;
+			renderMarkers(filterFacilities(activeFilter, activeRegionFilter));
 		}
 
 		// Filter button wiring.
@@ -257,18 +344,146 @@
 					b.classList.toggle('is-active', b === btn);
 					b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
 				});
-				applyFilter(slug);
+				applyFilter(slug, activeRegionFilter);
 			});
 		});
 
-		fetch(config.restUrl, { credentials: 'same-origin' })
+		// --- Czech regions overlay -----------------------------------------
+
+		function parseRegionPolygons(geojson) {
+			const out = {};
+			(geojson.features || []).forEach((f) => {
+				const slug = (f.properties && f.properties.slug) || '';
+				const name = (f.properties && f.properties.name) || slug;
+				if (!slug) return;
+				const polys = [];
+				const g = f.geometry || {};
+				const toLatLngs = (ring) => ring.map((c) => ({ lat: c[1], lng: c[0] }));
+				if (g.type === 'Polygon') {
+					polys.push(new google.maps.Polygon({ paths: toLatLngs(g.coordinates[0]) }));
+				} else if (g.type === 'MultiPolygon') {
+					g.coordinates.forEach((p) => {
+						polys.push(new google.maps.Polygon({ paths: toLatLngs(p[0]) }));
+					});
+				}
+				out[slug] = { name: name, polys: polys };
+			});
+			return out;
+		}
+
+		function assignFacilitiesToRegions() {
+			regionCounts = {};
+			if (!allRegions) return;
+			allFacilities.forEach((f) => {
+				const latLng = new google.maps.LatLng(f.lat, f.lng);
+				f.region = '';
+				for (const slug in allRegions) {
+					if (!Object.prototype.hasOwnProperty.call(allRegions, slug)) continue;
+					const polys = allRegions[slug].polys;
+					for (let i = 0; i < polys.length; i++) {
+						if (google.maps.geometry && google.maps.geometry.poly &&
+							google.maps.geometry.poly.containsLocation(latLng, polys[i])) {
+							f.region = slug;
+							regionCounts[slug] = (regionCounts[slug] || 0) + 1;
+							return;
+						}
+					}
+				}
+			});
+		}
+
+		function initRegionLayer(geojson) {
+			allRegions = parseRegionPolygons(geojson);
+
+			map.data.addGeoJson(geojson, { idPropertyName: 'slug' });
+
+			const baseStyle = {
+				fillColor: config.regionColor,
+				fillOpacity: 0.06,
+				strokeColor: config.regionColor,
+				strokeWeight: 1.2,
+				strokeOpacity: 0.55,
+				clickable: true,
+				zIndex: 1,
+			};
+			map.data.setStyle(baseStyle);
+
+			map.data.addListener('mouseover', (e) => {
+				map.data.overrideStyle(e.feature, {
+					fillOpacity: 0.22,
+					strokeWeight: 2,
+					strokeOpacity: 1,
+					zIndex: 50,
+				});
+				canvas.style.cursor = 'pointer';
+				const slug = e.feature.getProperty('slug');
+				const name = e.feature.getProperty('name');
+				const count = regionCounts[slug] || 0;
+				showTooltip(
+					'<strong>' + escapeHtmlSafe(name) + '</strong>' +
+					'<span>' + count + ' ' + escapeHtmlSafe(count === 1 ? config.i18n.placeCount : config.i18n.placesCount) + '</span>'
+				);
+			});
+
+			map.data.addListener('mouseout', (e) => {
+				map.data.revertStyle(e.feature);
+				canvas.style.cursor = '';
+				hideTooltip();
+			});
+
+			map.data.addListener('click', (e) => {
+				const slug = e.feature.getProperty('slug');
+				const name = e.feature.getProperty('name');
+				if (activeRegionFilter === slug) {
+					applyFilter(activeFilter, '');
+					renderRegionBar('', '');
+				} else {
+					applyFilter(activeFilter, slug);
+					renderRegionBar(slug, name);
+					const bounds = new google.maps.LatLngBounds();
+					allRegions[slug].polys.forEach((p) => {
+						p.getPath().forEach((latLng) => bounds.extend(latLng));
+					});
+					map.fitBounds(bounds, 48);
+				}
+			});
+		}
+
+		// --- Boot: load facilities + regions in parallel --------------------
+
+		const facilitiesPromise = fetch(config.restUrl, { credentials: 'same-origin' })
 			.then((r) => {
-				if (!r.ok) throw new Error('HTTP ' + r.status);
+				if (!r.ok) throw new Error('Facilities HTTP ' + r.status);
 				return r.json();
 			})
 			.then((data) => {
 				allFacilities = Array.isArray(data) ? data : [];
+			});
+
+		const regionsPromise = config.regions
+			? fetch(config.regionsUrl)
+				.then((r) => {
+					if (!r.ok) throw new Error('Regions HTTP ' + r.status);
+					return r.json();
+				})
+				.catch((err) => {
+					// Region overlay is non-critical — log but don't fail the map.
+					if (window.console) window.console.warn('[WPPM] regions overlay disabled:', err);
+					return null;
+				})
+			: Promise.resolve(null);
+
+		Promise.all([facilitiesPromise, regionsPromise])
+			.then(([_, geojson]) => {
 				hideLoading();
+				if (geojson) {
+					try {
+						initRegionLayer(geojson);
+						assignFacilitiesToRegions();
+					} catch (err) {
+						if (window.console) window.console.warn('[WPPM] region layer init failed:', err);
+					}
+				}
 				if (allFacilities.length === 0) {
 					canvas.insertAdjacentHTML(
 						'afterbegin',
@@ -277,7 +492,7 @@
 					return;
 				}
 				try {
-					applyFilter(activeFilter);
+					renderMarkers(filterFacilities(activeFilter, activeRegionFilter));
 				} catch (err) {
 					showError(err);
 				}

@@ -286,6 +286,107 @@
 	background: #fff !important;
 }
 
+/* ---------- Region overlay ---------- */
+
+.wppm-tooltip {
+	position: absolute;
+	top: 0;
+	left: 0;
+	pointer-events: none;
+	background: var(--wppm-ink);
+	color: #fff;
+	padding: 8px 12px;
+	border-radius: 8px;
+	font-size: 13px;
+	line-height: 1.35;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+	z-index: 4;
+	max-width: 240px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	transition: opacity 0.12s ease;
+	will-change: transform;
+}
+
+.wppm-tooltip[hidden] {
+	display: none;
+}
+
+.wppm-tooltip strong {
+	color: #fff;
+	font-size: 13.5px;
+	font-weight: 600;
+}
+
+.wppm-tooltip span {
+	color: var(--wppm-brand-soft);
+	font-size: 12px;
+}
+
+.wppm-region-bar {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	background: var(--wppm-brand-soft);
+	color: var(--wppm-brand-deep);
+	padding: 7px 8px 7px 14px;
+	border-radius: 999px;
+	font-size: 13px;
+	margin-bottom: 12px;
+	border: 1px solid #cae9f8;
+	animation: wppm-region-bar-in 0.18s ease;
+}
+
+.wppm-region-bar[hidden] {
+	display: none;
+}
+
+@keyframes wppm-region-bar-in {
+	from { opacity: 0; transform: translateY(-4px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+.wppm-region-bar-label {
+	color: var(--wppm-grey60);
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.wppm-region-bar-name {
+	color: var(--wppm-ink);
+	font-weight: 700;
+}
+
+.wppm-region-bar-clear {
+	appearance: none;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	border: none;
+	background: rgba(10, 111, 160, .12);
+	color: var(--wppm-brand-deep);
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: background 0.15s ease;
+}
+
+.wppm-region-bar-clear:hover {
+	background: rgba(10, 111, 160, .25);
+}
+
+.wppm-region-bar-clear:focus-visible {
+	outline: 2px solid var(--wppm-brand);
+	outline-offset: 2px;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 640px) {

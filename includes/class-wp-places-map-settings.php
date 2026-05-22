@@ -75,6 +75,8 @@ final class WPPM_Settings {
 		$out['height']        = isset( $input['height'] ) ? max( 200, min( 1200, (int) $input['height'] ) ) : 600;
 		$out['preserve_data'] = ! empty( $input['preserve_data'] ) ? 1 : 0;
 		$out['github_token']  = isset( $input['github_token'] ) ? sanitize_text_field( $input['github_token'] ) : '';
+		$out['show_regions']  = ! empty( $input['show_regions'] ) ? 1 : 0;
+		$out['region_color']  = $this->color( $input['region_color'] ?? '', '#41C8F4' );
 
 		delete_transient( WPPM_CACHE_KEY );
 		return $out;
@@ -102,6 +104,8 @@ final class WPPM_Settings {
 			'height'        => 600,
 			'preserve_data' => 1,
 			'github_token'  => '',
+			'show_regions'  => 1,
+			'region_color'  => '#41C8F4',
 		] );
 		?>
 		<div class="wrap wppm-settings">
@@ -172,6 +176,19 @@ final class WPPM_Settings {
 									<option value="default" <?php selected( $opts['map_style'], 'default' ); ?>><?php esc_html_e( 'Výchozí Google styl', 'wp-places-map' ); ?></option>
 								</select>
 							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Kraje ČR', 'wp-places-map' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="<?php echo esc_attr( WPPM_OPT ); ?>[show_regions]" value="1" <?php checked( ! empty( $opts['show_regions'] ) ); ?> />
+									<?php esc_html_e( 'Zobrazit interaktivní hranice 14 krajů ČR (najetím se kraj zvýrazní, klik filtruje místa)', 'wp-places-map' ); ?>
+								</label>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="wppm_region_color"><?php esc_html_e( 'Barva krajů', 'wp-places-map' ); ?></label></th>
+							<td><input type="text" id="wppm_region_color" name="<?php echo esc_attr( WPPM_OPT ); ?>[region_color]" value="<?php echo esc_attr( $opts['region_color'] ); ?>" class="wppm-color-picker" data-default="#41C8F4" /></td>
 						</tr>
 					</table>
 

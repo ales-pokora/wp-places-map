@@ -42,6 +42,7 @@ final class WPPM_Shortcode {
 			'type'    => '',
 			'filters' => ( ! empty( $settings['show_filters'] ) ) ? 'yes' : 'no',
 			'cluster' => ( ! empty( $settings['cluster'] ) ) ? 'yes' : 'no',
+			'regions' => ( ! empty( $settings['show_regions'] ) ) ? 'yes' : 'no',
 			'class'   => '',
 		], $atts, 'wp_places_map' );
 
@@ -92,16 +93,23 @@ final class WPPM_Shortcode {
 			'brandColor'     => $settings['brand_color'] ?? '#41C8F4',
 			'clusterColor'   => $settings['cluster_color'] ?? '#41C8F4',
 			'mapStylePreset' => $settings['map_style'] ?? 'light',
+			'regions'        => $this->bool( $atts['regions'] ),
+			'regionsUrl'     => esc_url_raw( WPPM_URL . 'assets/geojson/cz-kraje.geojson' ),
+			'regionColor'    => $settings['region_color'] ?? '#41C8F4',
 			'i18n'           => [
-				'all'      => __( 'Vše', 'wp-places-map' ),
-				'loading'  => __( 'Načítám zařízení…', 'wp-places-map' ),
-				'empty'    => __( 'Zatím nejsou k dispozici žádná zařízení.', 'wp-places-map' ),
-				'error'    => __( 'Mapu se nepodařilo načíst.', 'wp-places-map' ),
-				'phone'    => __( 'Telefon', 'wp-places-map' ),
-				'email'    => __( 'E-mail', 'wp-places-map' ),
-				'web'      => __( 'Web', 'wp-places-map' ),
-				'hours'    => __( 'Otevírací doba', 'wp-places-map' ),
-				'navigate' => __( 'Navigovat', 'wp-places-map' ),
+				'all'         => __( 'Vše', 'wp-places-map' ),
+				'loading'     => __( 'Načítám zařízení…', 'wp-places-map' ),
+				'empty'       => __( 'Zatím nejsou k dispozici žádná zařízení.', 'wp-places-map' ),
+				'error'       => __( 'Mapu se nepodařilo načíst.', 'wp-places-map' ),
+				'phone'       => __( 'Telefon', 'wp-places-map' ),
+				'email'       => __( 'E-mail', 'wp-places-map' ),
+				'web'         => __( 'Web', 'wp-places-map' ),
+				'hours'       => __( 'Otevírací doba', 'wp-places-map' ),
+				'navigate'    => __( 'Navigovat', 'wp-places-map' ),
+				'placesCount' => __( 'zařízení', 'wp-places-map' ),
+				'placeCount'  => __( 'zařízení', 'wp-places-map' ),
+				'clearRegion' => __( 'Zobrazit všechny kraje', 'wp-places-map' ),
+				'regionLabel' => __( 'Kraj:', 'wp-places-map' ),
 			],
 		];
 
@@ -184,7 +192,7 @@ final class WPPM_Shortcode {
 		// Google Maps loaded last via the global callback the frontend script defines.
 		wp_register_script(
 			self::HANDLE_GMAPS,
-			'https://maps.googleapis.com/maps/api/js?key=' . rawurlencode( $api_key ) . '&loading=async&callback=WPPM_onMapsReady',
+			'https://maps.googleapis.com/maps/api/js?key=' . rawurlencode( $api_key ) . '&libraries=geometry&loading=async&callback=WPPM_onMapsReady',
 			[ self::HANDLE_APP ],
 			null,
 			true
