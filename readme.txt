@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.5
+Stable tag: 1.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,9 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.6 =
+* Cluster bublina je teď plně plochý cyan kruh — odstraněn radial-gradient highlight uvnitř SVG. Číslo na čistém pozadí, dynamický pulse halo zůstává a teď drží veškerou vizuální energii.
 
 = 1.0.5 =
 * **Dynamický pulse halo na clusterech** — místo statického cyan gradientu na okraji clusteru se teď okolo cluster bublin vlní jemné radiální haló. Dva nezávislé sloty: vždy max 2 cluster bubliny pulzují současně, výběr je náhodný, takže záře "skáče" mezi krajem. Animace 2.4 s ease-out, respektuje `prefers-reduced-motion`.

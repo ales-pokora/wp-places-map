@@ -71,18 +71,11 @@
 				const count = cluster.count;
 				const position = cluster.position;
 				const size = clusterSizeFor(count);
-				const r = (size / 2) - 6; // solid disc
+				const r = (size / 2) - 6;
 				const fontSize = Math.max(15, Math.round(size * 0.36));
 				const svg = window.btoa(
 					'<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
-						'<defs>' +
-							'<radialGradient id="hl" cx="50%" cy="38%" r="55%">' +
-								'<stop offset="0%" stop-color="white" stop-opacity="0.35"/>' +
-								'<stop offset="100%" stop-color="white" stop-opacity="0"/>' +
-							'</radialGradient>' +
-						'</defs>' +
 						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="' + brandColor + '"/>' +
-						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="url(#hl)"/>' +
 						'<text x="50%" y="50%" dy=".34em" text-anchor="middle" fill="white" ' +
 							'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" ' +
 							'font-size="' + fontSize + '" font-weight="700" letter-spacing="-0.5">' + count + '</text>' +
