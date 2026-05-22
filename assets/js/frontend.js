@@ -802,16 +802,13 @@
 
 		let regionBadges = [];
 
-		function regionBadgeSvg(count, color, isSelected) {
+		function regionBadgeSvg(count, color) {
 			const size = 38;
 			const r = (size / 2) - 3;
-			const fillCol = isSelected ? color : '#ffffff';
-			const textCol = isSelected ? '#ffffff' : color;
-			const strokeWidth = isSelected ? 0 : 2;
 			return window.btoa(
 				'<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
-					'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="' + fillCol + '" stroke="' + color + '" stroke-width="' + strokeWidth + '"/>' +
-					'<text x="50%" y="50%" dy=".34em" text-anchor="middle" fill="' + textCol + '" ' +
+					'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="#ffffff" stroke="' + color + '" stroke-width="2"/>' +
+					'<text x="50%" y="50%" dy=".34em" text-anchor="middle" fill="' + color + '" ' +
 						'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" ' +
 						'font-size="14" font-weight="700">' + count + '</text>' +
 				'</svg>'
@@ -852,17 +849,21 @@
 			});
 
 			Object.keys(allRegions).forEach((slug) => {
+				// Skip the currently-active region — the chip above the map plus
+				// the cluster bubble inside the region already make it obvious,
+				// and stacking the badge on top of the cluster looks like a bug.
+				if (slug === activeRegionFilter) return;
+
 				const count = counts[slug] || 0;
 				if (count === 0) return;
 				const center = regionCentroid(slug);
 				if (!center) return;
 
-				const isSelected = (slug === activeRegionFilter);
 				const size = 38;
 				const marker = new google.maps.Marker({
 					position: center,
 					icon: {
-						url: 'data:image/svg+xml;base64,' + regionBadgeSvg(count, config.regionColor, isSelected),
+						url: 'data:image/svg+xml;base64,' + regionBadgeSvg(count, config.regionColor),
 						scaledSize: new google.maps.Size(size, size),
 						anchor: new google.maps.Point(size / 2, size / 2),
 					},
