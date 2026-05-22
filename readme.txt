@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,11 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.4 =
+* **Velký „wow" detail jako popup modal** — kliknutí na marker už neotevírá malé InfoWindow, ale plnohodnotný modální dialog vystředěný na obrazovku. Hero gradient (nebo náhledový obrázek pokud je k zařízení nahraný), velký název, typ badge, kraj, popis v citátovém boxu, ikony pro telefon/e-mail/web/otevírací dobu, dvouvrstvé CTA (velké „Navigovat" + sekundární „Zavolat / Napsat / Web"). Backdrop-blur za modálem, scale+fade animace, zavře se ESC, kliknutím mimo, nebo ×.
+* **Větší cluster bubliny** — počty zařízení v kraji se teď zobrazují jako výrazné cyan kruhy s glow efektem (60–100 px namísto 44–68 px). Lépe čitelné z dálky, působí jako region-summary badge.
+* **Search input ladí s filtry** — vyhledávací pole sedí na stejném řádku jako filtr typu (search vlevo, filtry vpravo). Krátký placeholder „Hledat zařízení…". Force-CSS proti Divi resetům, ať je placeholder vždy vidět.
 
 = 1.0.3 =
 * **Fulltextové hledání** nad mapou — diakritiku-insenzitivní substring match přes název, město, ulici, PSČ, typ a popis. Kombinuje se s filtrem typu i filtrem kraje. Pole lze vypnout v nastavení.

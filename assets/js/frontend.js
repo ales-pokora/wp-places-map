@@ -63,15 +63,33 @@
 
 	function clusterRendererFactory(brandColor) {
 		return {
-			render: function (cluster, stats) {
+			render: function (cluster) {
 				const count = cluster.count;
 				const position = cluster.position;
-				const size = count < 10 ? 44 : count < 50 ? 52 : count < 200 ? 60 : 68;
+				// Bigger, more confident sizing — these read as region summary badges.
+				const size = count < 10 ? 60 : count < 50 ? 72 : count < 200 ? 86 : 100;
+				const r1 = (size / 2) - 2;            // outermost soft halo
+				const r2 = (size / 2) - 10;           // mid translucent ring
+				const r3 = (size / 2) - 18;           // solid inner circle
+				const fontSize = Math.max(16, Math.round(size * 0.34));
 				const svg = window.btoa(
 					'<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
-						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + (size / 2 - 4) + '" fill="' + brandColor + '" fill-opacity="0.25"/>' +
-						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + (size / 2 - 10) + '" fill="' + brandColor + '"/>' +
-						'<text x="50%" y="52%" dy=".35em" text-anchor="middle" fill="white" font-family="Inter, system-ui, sans-serif" font-size="' + Math.round(size * 0.36) + '" font-weight="700">' + count + '</text>' +
+						'<defs>' +
+							'<filter id="g" x="-20%" y="-20%" width="140%" height="140%">' +
+								'<feGaussianBlur stdDeviation="2.5"/>' +
+							'</filter>' +
+							'<radialGradient id="rg" cx="50%" cy="45%" r="55%">' +
+								'<stop offset="0%" stop-color="white" stop-opacity="0.35"/>' +
+								'<stop offset="100%" stop-color="white" stop-opacity="0"/>' +
+							'</radialGradient>' +
+						'</defs>' +
+						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r1 + '" fill="' + brandColor + '" fill-opacity="0.12"/>' +
+						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r2 + '" fill="' + brandColor + '" fill-opacity="0.28"/>' +
+						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r3 + '" fill="' + brandColor + '"/>' +
+						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r3 + '" fill="url(#rg)"/>' +
+						'<text x="50%" y="50%" dy=".34em" text-anchor="middle" fill="white" ' +
+							'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" ' +
+							'font-size="' + fontSize + '" font-weight="700" letter-spacing="-0.5">' + count + '</text>' +
 					'</svg>'
 				);
 				return new google.maps.Marker({
@@ -88,58 +106,192 @@
 		};
 	}
 
-	function buildInfoWindowContent(facility, i18n) {
-		const safe = (v) => (v == null ? '' : String(v));
-		const escapeHtml = (s) =>
-			safe(s)
-				.replace(/&/g, '&amp;')
-				.replace(/</g, '&lt;')
-				.replace(/>/g, '&gt;')
-				.replace(/"/g, '&quot;')
-				.replace(/'/g, '&#39;');
+	function escapeHtml(s) {
+		return String(s == null ? '' : s)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
 
-		const lines = [];
-		lines.push('<div class="wppm-iw">');
-		if (facility.type_label) {
-			lines.push('<span class="wppm-iw-badge">' + escapeHtml(facility.type_label) + '</span>');
+	function hostnameOf(url) {
+		try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return url; }
+	}
+
+	function createDetailModal() {
+		const modal = document.createElement('div');
+		modal.className = 'wppm-modal';
+		modal.setAttribute('role', 'dialog');
+		modal.setAttribute('aria-modal', 'true');
+		modal.setAttribute('aria-labelledby', 'wppm-modal-title-' + Math.random().toString(36).slice(2, 8));
+		modal.hidden = true;
+		modal.innerHTML =
+			'<div class="wppm-modal-backdrop" data-wppm-close></div>' +
+			'<div class="wppm-modal-card" role="document">' +
+				'<div class="wppm-modal-hero">' +
+					'<div class="wppm-modal-hero-blob" aria-hidden="true"></div>' +
+					'<div class="wppm-modal-hero-image" aria-hidden="true"></div>' +
+					'<button type="button" class="wppm-modal-close" data-wppm-close aria-label="Zavřít detail">' +
+						'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">' +
+							'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>' +
+					'</button>' +
+				'</div>' +
+				'<div class="wppm-modal-body">' +
+					'<span class="wppm-modal-badge" hidden></span>' +
+					'<h2 class="wppm-modal-title" id="' + modal.getAttribute('aria-labelledby') + '"></h2>' +
+					'<p class="wppm-modal-addr" hidden></p>' +
+					'<p class="wppm-modal-region" hidden></p>' +
+					'<p class="wppm-modal-desc" hidden></p>' +
+					'<div class="wppm-modal-meta"></div>' +
+					'<div class="wppm-modal-actions"></div>' +
+				'</div>' +
+			'</div>';
+		return modal;
+	}
+
+	function renderDetailModal(modal, facility, i18n, regions) {
+		const card = modal.querySelector('.wppm-modal-card');
+		const badge = modal.querySelector('.wppm-modal-badge');
+		const title = modal.querySelector('.wppm-modal-title');
+		const addr = modal.querySelector('.wppm-modal-addr');
+		const region = modal.querySelector('.wppm-modal-region');
+		const desc = modal.querySelector('.wppm-modal-desc');
+		const meta = modal.querySelector('.wppm-modal-meta');
+		const actions = modal.querySelector('.wppm-modal-actions');
+		const heroImg = modal.querySelector('.wppm-modal-hero-image');
+
+		// Hero: thumbnail if available, otherwise leave the blob gradient.
+		if (facility.image) {
+			heroImg.style.backgroundImage = 'url(' + JSON.stringify(facility.image).slice(1, -1) + ')';
+			heroImg.classList.add('has-image');
+			card.classList.add('has-image');
+		} else {
+			heroImg.style.backgroundImage = '';
+			heroImg.classList.remove('has-image');
+			card.classList.remove('has-image');
 		}
-		lines.push('<h3 class="wppm-iw-title">' + escapeHtml(facility.title) + '</h3>');
 
-		const addrParts = [facility.address, [facility.zip, facility.city].filter(Boolean).join(' ')].filter(Boolean);
-		if (addrParts.length) {
-			lines.push('<p class="wppm-iw-addr">' + escapeHtml(addrParts.join(', ')) + '</p>');
+		if (facility.type_label) {
+			badge.textContent = facility.type_label;
+			badge.hidden = false;
+		} else {
+			badge.hidden = true;
+		}
+
+		title.textContent = facility.title || '';
+
+		const addrLine = [facility.address, [facility.zip, facility.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+		if (addrLine) {
+			addr.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+				'<span></span>';
+			addr.querySelector('span').textContent = addrLine;
+			addr.hidden = false;
+		} else {
+			addr.hidden = true;
+		}
+
+		if (facility.region && regions && regions[facility.region]) {
+			region.textContent = regions[facility.region].name;
+			region.hidden = false;
+		} else {
+			region.hidden = true;
 		}
 
 		if (facility.description) {
-			const desc = facility.description.length > 220 ? facility.description.slice(0, 220) + '…' : facility.description;
-			lines.push('<p class="wppm-iw-desc">' + escapeHtml(desc) + '</p>');
+			desc.textContent = facility.description;
+			desc.hidden = false;
+		} else {
+			desc.hidden = true;
 		}
 
+		// Meta rows (phone, email, web, hours).
+		meta.innerHTML = '';
 		const rows = [];
 		if (facility.phone) {
-			rows.push('<li><span>' + escapeHtml(i18n.phone) + '</span><a href="tel:' + escapeHtml(facility.phone.replace(/\s+/g, '')) + '">' + escapeHtml(facility.phone) + '</a></li>');
+			rows.push({
+				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/></svg>',
+				label: i18n.phone,
+				value: facility.phone,
+				href: 'tel:' + facility.phone.replace(/\s+/g, ''),
+			});
 		}
 		if (facility.email) {
-			rows.push('<li><span>' + escapeHtml(i18n.email) + '</span><a href="mailto:' + escapeHtml(facility.email) + '">' + escapeHtml(facility.email) + '</a></li>');
+			rows.push({
+				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6L12 13 2 6"/></svg>',
+				label: i18n.email,
+				value: facility.email,
+				href: 'mailto:' + facility.email,
+			});
 		}
 		if (facility.website) {
-			let host = facility.website;
-			try { host = new URL(facility.website).hostname.replace(/^www\./, ''); } catch (e) { /* noop */ }
-			rows.push('<li><span>' + escapeHtml(i18n.web) + '</span><a href="' + escapeHtml(facility.website) + '" target="_blank" rel="noopener">' + escapeHtml(host) + '</a></li>');
+			rows.push({
+				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+				label: i18n.web,
+				value: hostnameOf(facility.website),
+				href: facility.website,
+				external: true,
+			});
 		}
 		if (facility.hours) {
-			rows.push('<li class="wppm-iw-hours"><span>' + escapeHtml(i18n.hours) + '</span><pre>' + escapeHtml(facility.hours) + '</pre></li>');
+			rows.push({
+				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+				label: i18n.hours,
+				value: facility.hours,
+				pre: true,
+			});
 		}
-		if (rows.length) {
-			lines.push('<ul class="wppm-iw-list">' + rows.join('') + '</ul>');
-		}
+		rows.forEach((row) => {
+			const item = document.createElement('div');
+			item.className = 'wppm-modal-meta-row' + (row.pre ? ' is-pre' : '');
+			const labelHtml = '<span class="wppm-modal-meta-label">' + escapeHtml(row.label) + '</span>';
+			const valueHtml = row.pre
+				? '<pre class="wppm-modal-meta-pre"></pre>'
+				: (row.href
+					? '<a class="wppm-modal-meta-value" href="' + escapeHtml(row.href) + '"' + (row.external ? ' target="_blank" rel="noopener"' : '') + '></a>'
+					: '<span class="wppm-modal-meta-value"></span>');
+			item.innerHTML =
+				'<span class="wppm-modal-meta-icon">' + row.icon + '</span>' +
+				'<span class="wppm-modal-meta-text">' + labelHtml + valueHtml + '</span>';
+			item.querySelector('.wppm-modal-meta-value, .wppm-modal-meta-pre').textContent = row.value;
+			meta.appendChild(item);
+		});
 
-		const dest = encodeURIComponent(addrParts.length ? facility.title + ', ' + addrParts.join(', ') : facility.lat + ',' + facility.lng);
-		lines.push('<div class="wppm-iw-actions">');
-		lines.push('<a class="wppm-iw-btn" href="https://www.google.com/maps/dir/?api=1&destination=' + dest + '" target="_blank" rel="noopener">' + escapeHtml(i18n.navigate) + '</a>');
-		lines.push('</div>');
-		lines.push('</div>');
-		return lines.join('');
+		// Actions: primary "Navigate" + secondaries (Call, Email, Web).
+		actions.innerHTML = '';
+		const destParts = [facility.title, addrLine].filter(Boolean).join(', ');
+		const dest = encodeURIComponent(destParts || (facility.lat + ',' + facility.lng));
+
+		const cta = document.createElement('a');
+		cta.className = 'wppm-modal-cta';
+		cta.href = 'https://www.google.com/maps/dir/?api=1&destination=' + dest;
+		cta.target = '_blank';
+		cta.rel = 'noopener';
+		cta.innerHTML =
+			'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>' +
+			'<span></span>';
+		cta.querySelector('span').textContent = i18n.navigate;
+		actions.appendChild(cta);
+
+		// Optional secondary actions.
+		const secondaries = [];
+		if (facility.phone) secondaries.push({ label: i18n.phone, href: 'tel:' + facility.phone.replace(/\s+/g, '') });
+		if (facility.email) secondaries.push({ label: i18n.email, href: 'mailto:' + facility.email });
+		if (facility.website) secondaries.push({ label: i18n.web, href: facility.website, external: true });
+
+		if (secondaries.length) {
+			const row = document.createElement('div');
+			row.className = 'wppm-modal-actions-secondary';
+			secondaries.forEach((s) => {
+				const a = document.createElement('a');
+				a.className = 'wppm-modal-action';
+				a.href = s.href;
+				if (s.external) { a.target = '_blank'; a.rel = 'noopener'; }
+				a.textContent = s.label;
+				row.appendChild(a);
+			});
+			actions.appendChild(row);
+		}
 	}
 
 	function bootInstance(config) {
@@ -183,12 +335,55 @@
 			return;
 		}
 
-		const infoWindow = new google.maps.InfoWindow({ maxWidth: 320 });
 		const markerIcon = {
 			url: markerSvgDataUri(config.brandColor),
 			scaledSize: new google.maps.Size(34, 44),
 			anchor: new google.maps.Point(17, 44),
 		};
+
+		// Build detail modal once, append to <body> so transformed ancestors
+		// (e.g. Divi sections) don't break position: fixed.
+		const detailModal = createDetailModal();
+		document.body.appendChild(detailModal);
+
+		let lastFocused = null;
+
+		function openDetail(facility) {
+			renderDetailModal(detailModal, facility, config.i18n, allRegions || {});
+			lastFocused = document.activeElement;
+			detailModal.hidden = false;
+			// Force reflow so the transition runs from initial state.
+			void detailModal.offsetWidth;
+			detailModal.classList.add('is-open');
+			document.body.classList.add('wppm-modal-locked');
+			// Defer focus so transition starts smoothly.
+			setTimeout(function () {
+				const closeBtn = detailModal.querySelector('.wppm-modal-close');
+				if (closeBtn) closeBtn.focus();
+			}, 50);
+		}
+
+		function closeDetail() {
+			if (detailModal.hidden) return;
+			detailModal.classList.remove('is-open');
+			document.body.classList.remove('wppm-modal-locked');
+			// Wait for transition before hiding entirely.
+			setTimeout(function () {
+				detailModal.hidden = true;
+				if (lastFocused && typeof lastFocused.focus === 'function') {
+					lastFocused.focus();
+				}
+			}, 220);
+		}
+
+		detailModal.addEventListener('click', function (e) {
+			if (e.target.closest('[data-wppm-close]')) {
+				closeDetail();
+			}
+		});
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape' && !detailModal.hidden) closeDetail();
+		});
 
 		let allFacilities = [];
 		let allRegions = null; // { slug: { name, polys: [google.maps.Polygon] } }
@@ -296,10 +491,7 @@
 					icon: markerIcon,
 					optimized: true,
 				});
-				marker.addListener('click', () => {
-					infoWindow.setContent(buildInfoWindowContent(f, config.i18n));
-					infoWindow.open({ map, anchor: marker, shouldFocus: false });
-				});
+				marker.addListener('click', () => openDetail(f));
 				markers.push(marker);
 			});
 

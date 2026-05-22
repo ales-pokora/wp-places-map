@@ -138,7 +138,7 @@ final class WPPM_Shortcode {
 							<circle cx="11" cy="11" r="7"/>
 							<line x1="21" y1="21" x2="16.65" y2="16.65"/>
 						</svg>
-						<input type="search" class="wppm-search-input" placeholder="<?php esc_attr_e( 'Hledat zařízení (název, město, ulice)…', 'wp-places-map' ); ?>" aria-label="<?php esc_attr_e( 'Hledat zařízení', 'wp-places-map' ); ?>" autocomplete="off" />
+						<input type="search" class="wppm-search-input" placeholder="<?php esc_attr_e( 'Hledat zařízení…', 'wp-places-map' ); ?>" aria-label="<?php esc_attr_e( 'Hledat zařízení (název, město, ulice)', 'wp-places-map' ); ?>" autocomplete="off" />
 						<button type="button" class="wppm-search-clear" aria-label="<?php esc_attr_e( 'Zrušit hledání', 'wp-places-map' ); ?>" hidden>×</button>
 					</div>
 				<?php endif; ?>
