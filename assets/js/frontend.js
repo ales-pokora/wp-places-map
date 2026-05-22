@@ -616,10 +616,8 @@
 			activeFilter = typeSlug || '';
 			activeRegionFilter = regionSlug != null ? regionSlug : activeRegionFilter;
 			if (query != null) activeQuery = query;
-			const filtered = filterFacilities(activeFilter, activeRegionFilter, activeQuery);
-			renderMarkers(filtered);
+			renderMarkers(filterFacilities(activeFilter, activeRegionFilter, activeQuery));
 			refreshFilterPillCounts();
-			renderEmptyFiltered(filtered);
 		}
 
 		// Compute how many places remain *for each type* given the current region+query filters,
@@ -649,60 +647,6 @@
 			});
 		}
 
-		// Show an overlay inside the map when the active filter combo matches 0 facilities
-		// but there are still places in the dataset. One click restores everything.
-		let emptyFilteredEl = null;
-		function renderEmptyFiltered(filtered) {
-			const shouldShow = allFacilities.length > 0 && filtered.length === 0
-				&& (activeFilter || activeRegionFilter || activeQuery);
-			if (!shouldShow) {
-				if (emptyFilteredEl) {
-					emptyFilteredEl.remove();
-					emptyFilteredEl = null;
-				}
-				return;
-			}
-			if (!emptyFilteredEl) {
-				emptyFilteredEl = document.createElement('div');
-				emptyFilteredEl.className = 'wppm-empty wppm-empty-filtered';
-				canvas.appendChild(emptyFilteredEl);
-			}
-			emptyFilteredEl.innerHTML =
-				'<div class="wppm-empty-card">' +
-					'<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-						'<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
-					'</svg>' +
-					'<strong></strong>' +
-					'<span></span>' +
-					'<button type="button" class="wppm-empty-clear">' + escapeHtmlSafe(config.i18n.clearFilters || 'Zrušit filtry') + '</button>' +
-				'</div>';
-			emptyFilteredEl.querySelector('strong').textContent = config.i18n.noFilterResults || 'V tomto výběru nejsou žádná zařízení';
-			emptyFilteredEl.querySelector('span').textContent = config.i18n.noFilterResultsHint || 'Zkuste jiný kraj, jiný typ, nebo zrušte filtry.';
-			emptyFilteredEl.querySelector('.wppm-empty-clear').addEventListener('click', resetAllFilters);
-		}
-
-		function resetAllFilters() {
-			activeFilter = '';
-			activeRegionFilter = '';
-			activeQuery = '';
-			// Sync UI
-			wrap.querySelectorAll('.wppm-filter').forEach((b) => {
-				const isAll = !b.getAttribute('data-filter');
-				b.classList.toggle('is-active', isAll);
-				b.setAttribute('aria-selected', isAll ? 'true' : 'false');
-			});
-			const si = wrap.querySelector('.wppm-search-input');
-			const sc = wrap.querySelector('.wppm-search-clear');
-			if (si) si.value = '';
-			if (sc) sc.hidden = true;
-			renderRegionBar('', '');
-			clearSelectedRegion();
-			map.setCenter(config.center);
-			map.setZoom(config.zoom);
-			renderMarkers(allFacilities);
-			refreshFilterPillCounts();
-			renderEmptyFiltered(allFacilities);
-		}
 
 		// Filter button wiring.
 		const filterButtons = wrap.querySelectorAll('.wppm-filter');
@@ -920,10 +864,8 @@
 					return;
 				}
 				try {
-					const filtered = filterFacilities(activeFilter, activeRegionFilter, activeQuery);
-					renderMarkers(filtered);
+					renderMarkers(filterFacilities(activeFilter, activeRegionFilter, activeQuery));
 					refreshFilterPillCounts();
-					renderEmptyFiltered(filtered);
 				} catch (err) {
 					showError(err);
 				}

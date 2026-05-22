@@ -244,65 +244,6 @@
 	background: rgba(245, 248, 250, 0.9);
 }
 
-.wppm-empty-filtered {
-	background: rgba(245, 248, 250, 0.92);
-	backdrop-filter: blur(4px);
-	-webkit-backdrop-filter: blur(4px);
-}
-
-.wppm-empty-card {
-	background: #fff;
-	border: 1px solid var(--wppm-border);
-	border-radius: 16px;
-	padding: 28px 32px;
-	box-shadow: 0 12px 32px -10px rgba(27, 43, 58, 0.18);
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 8px;
-	max-width: 380px;
-	text-align: center;
-}
-
-.wppm-empty-card svg {
-	color: var(--wppm-brand);
-	margin-bottom: 4px;
-}
-
-.wppm-empty-card strong {
-	font-size: 16px;
-	color: var(--wppm-ink);
-	font-weight: 700;
-	line-height: 1.3;
-}
-
-.wppm-empty-card span {
-	color: var(--wppm-grey60);
-	font-size: 13.5px;
-	line-height: 1.45;
-}
-
-.wppm-empty-clear {
-	appearance: none;
-	margin-top: 12px;
-	padding: 10px 22px;
-	background: var(--wppm-brand);
-	color: #fff;
-	border: none;
-	border-radius: 999px;
-	font: inherit;
-	font-size: 14px;
-	font-weight: 600;
-	cursor: pointer;
-	transition: background .15s ease, transform .15s ease;
-	box-shadow: 0 6px 14px -4px rgba(65, 200, 244, .5);
-}
-
-.wppm-empty-clear:hover {
-	background: var(--wppm-brand-deep);
-	transform: translateY(-1px);
-}
-
 /* Dim filter pills that have zero matches in the current region/search. */
 .wppm-filter.is-empty {
 	opacity: 0.55;

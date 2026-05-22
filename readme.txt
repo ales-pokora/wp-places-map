@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.7
+Stable tag: 1.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,10 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.8 =
+* **Praha sloučena do Středočeského kraje.** GeoJSON přepočítán z 14 na 13 features geometrickým sjednocením polygonů Praha (CZ010) + Středočeský (CZ020). Místa v Praze se teď klasifikují jako Středočeský kraj, kliknutí na region "Středočeský" zobrazí všechna pražská i středočeská zařízení dohromady.
+* Odstraněn overlay "Žádné zařízení v tomto výběru" — ztlumené pillky s 0 počtem dostatečně signalizují prázdný stav, modal byl příliš dominantní.
 
 = 1.0.7 =
 * **Filter pillky se přepočítávají dle vybraného kraje** — počet vedle "Lékárna", "Nemocnice" atd. se mění podle aktivního kraje + vyhledávacího dotazu. Typ s 0 výsledky se vizuálně ztlumí + jeho počet zčervená, takže prázdný stav je hned zřejmý (pomáhá rozlišit "Praha vs. Středočeský kraj" — Praha je samostatný NUTS3 region, ne součást Středočeského).
