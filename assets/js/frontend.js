@@ -61,32 +61,28 @@
 		return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 	}
 
+	function clusterSizeFor(count) {
+		return count < 10 ? 56 : count < 50 ? 68 : count < 200 ? 82 : 96;
+	}
+
 	function clusterRendererFactory(brandColor) {
 		return {
 			render: function (cluster) {
 				const count = cluster.count;
 				const position = cluster.position;
-				// Bigger, more confident sizing — these read as region summary badges.
-				const size = count < 10 ? 60 : count < 50 ? 72 : count < 200 ? 86 : 100;
-				const r1 = (size / 2) - 2;            // outermost soft halo
-				const r2 = (size / 2) - 10;           // mid translucent ring
-				const r3 = (size / 2) - 18;           // solid inner circle
-				const fontSize = Math.max(16, Math.round(size * 0.34));
+				const size = clusterSizeFor(count);
+				const r = (size / 2) - 6; // solid disc
+				const fontSize = Math.max(15, Math.round(size * 0.36));
 				const svg = window.btoa(
 					'<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
 						'<defs>' +
-							'<filter id="g" x="-20%" y="-20%" width="140%" height="140%">' +
-								'<feGaussianBlur stdDeviation="2.5"/>' +
-							'</filter>' +
-							'<radialGradient id="rg" cx="50%" cy="45%" r="55%">' +
+							'<radialGradient id="hl" cx="50%" cy="38%" r="55%">' +
 								'<stop offset="0%" stop-color="white" stop-opacity="0.35"/>' +
 								'<stop offset="100%" stop-color="white" stop-opacity="0"/>' +
 							'</radialGradient>' +
 						'</defs>' +
-						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r1 + '" fill="' + brandColor + '" fill-opacity="0.12"/>' +
-						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r2 + '" fill="' + brandColor + '" fill-opacity="0.28"/>' +
-						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r3 + '" fill="' + brandColor + '"/>' +
-						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r3 + '" fill="url(#rg)"/>' +
+						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="' + brandColor + '"/>' +
+						'<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="url(#hl)"/>' +
 						'<text x="50%" y="50%" dy=".34em" text-anchor="middle" fill="white" ' +
 							'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" ' +
 							'font-size="' + fontSize + '" font-weight="700" letter-spacing="-0.5">' + count + '</text>' +
@@ -393,6 +389,88 @@
 		let activeFilter = config.typeFilter || '';
 		let activeRegionFilter = '';
 		let activeQuery = '';
+		let selectedFeature = null; // map.data feature currently active
+		let haloOverlays = [];      // WPPMHalo[] anchored to current cluster positions
+		let glowSchedulerStarted = false;
+
+		// --- Halo OverlayView for pulsing glow on cluster bubbles ----------
+
+		class WPPMHalo extends google.maps.OverlayView {
+			constructor(position, size) {
+				super();
+				this.position = position;
+				this.size = size;
+				this.div = null;
+			}
+			onAdd() {
+				this.div = document.createElement('div');
+				this.div.className = 'wppm-cluster-halo';
+				const haloSize = Math.round(this.size * 2.4);
+				this.div.style.width = haloSize + 'px';
+				this.div.style.height = haloSize + 'px';
+				const panes = this.getPanes();
+				// overlayLayer is below markerLayer so the actual cluster marker stays clickable.
+				(panes && (panes.overlayLayer || panes.markerLayer || panes.floatPane) || document.body)
+					.appendChild(this.div);
+			}
+			draw() {
+				if (!this.div) return;
+				const proj = this.getProjection();
+				if (!proj) return;
+				const px = proj.fromLatLngToDivPixel(this.position);
+				if (!px) return;
+				const w = this.div.offsetWidth || 0;
+				const h = this.div.offsetHeight || 0;
+				this.div.style.left = (px.x - w / 2) + 'px';
+				this.div.style.top = (px.y - h / 2) + 'px';
+			}
+			onRemove() {
+				if (this.div && this.div.parentNode) {
+					this.div.parentNode.removeChild(this.div);
+				}
+				this.div = null;
+			}
+			pulse() {
+				if (!this.div) return;
+				this.div.classList.remove('is-pulsing');
+				void this.div.offsetWidth; // force reflow so animation restarts
+				this.div.classList.add('is-pulsing');
+			}
+		}
+
+		function syncHalos() {
+			haloOverlays.forEach((h) => h.setMap(null));
+			haloOverlays = [];
+			if (!cluster || !cluster.clusters) return;
+			cluster.clusters.forEach((c) => {
+				if (!c || !c.position) return;
+				const count = c.count || (c.markers ? c.markers.length : 0);
+				if (count <= 1) return;
+				const halo = new WPPMHalo(c.position, clusterSizeFor(count));
+				halo.setMap(map);
+				haloOverlays.push(halo);
+			});
+		}
+
+		function startGlowSchedulers() {
+			if (glowSchedulerStarted) return;
+			glowSchedulerStarted = true;
+			// Two independent slots: at any moment at most 2 halos are pulsing.
+			// Each slot picks a random halo, pulses it, waits (animation + jitter), picks again.
+			function slot(initialDelay) {
+				setTimeout(function tick() {
+					if (haloOverlays.length === 0) {
+						setTimeout(tick, 1500);
+						return;
+					}
+					const pick = haloOverlays[Math.floor(Math.random() * haloOverlays.length)];
+					pick.pulse();
+					setTimeout(tick, 2400 + Math.floor(Math.random() * 700));
+				}, initialDelay);
+			}
+			slot(0);
+			slot(1100); // offset second slot so the two pulses don't sync up
+		}
 
 		// Diacritic-insensitive lowercase for fuzzy text matching.
 		// "Pardubické" and "Pardubicke" both normalise to "pardubicke".
@@ -460,10 +538,18 @@
 			regionBar.querySelector('.wppm-region-bar-clear').addEventListener('click', function () {
 				applyFilter(activeFilter, '');
 				renderRegionBar('', '');
+				clearSelectedRegion();
 				// Always restore the CZ-wide configured view when the user clears a region.
 				map.setCenter(config.center);
 				map.setZoom(config.zoom);
 			});
+		}
+
+		function clearSelectedRegion() {
+			if (selectedFeature) {
+				try { map.data.revertStyle(selectedFeature); } catch (e) { /* noop */ }
+				selectedFeature = null;
+			}
 		}
 
 		function escapeHtmlSafe(s) {
@@ -477,6 +563,8 @@
 				cluster.clearMarkers();
 				cluster = null;
 			}
+			haloOverlays.forEach((h) => h.setMap(null));
+			haloOverlays = [];
 			markers.forEach((m) => m.setMap(null));
 			markers = [];
 		}
@@ -501,8 +589,18 @@
 					markers,
 					renderer: clusterRendererFactory(config.clusterColor),
 				});
+				// Re-sync halo positions every time MarkerClusterer recomputes (zoom/pan).
+				try {
+					cluster.addListener('clusteringend', syncHalos);
+				} catch (e) { /* older MC versions: best-effort */ }
+				// Initial sync — clusteringend doesn't always fire synchronously on construction.
+				setTimeout(syncHalos, 80);
+				startGlowSchedulers();
 			} else if (markers.length) {
 				markers.forEach((m) => m.setMap(map));
+				// Single-marker maps: drop any halos that might be lingering.
+				haloOverlays.forEach((h) => h.setMap(null));
+				haloOverlays = [];
 			}
 
 			// Keep the configured CZ-wide view by default. fitBounds is only triggered
@@ -624,7 +722,21 @@
 			};
 			map.data.setStyle(baseStyle);
 
+			const SELECTED_STYLE = {
+				fillColor: config.regionColor,
+				fillOpacity: 0.32,
+				strokeColor: config.regionColor,
+				strokeWeight: 3,
+				strokeOpacity: 1,
+				zIndex: 60,
+			};
+
+			function applySelected(feature) {
+				map.data.overrideStyle(feature, SELECTED_STYLE);
+			}
+
 			map.data.addListener('mouseover', (e) => {
+				if (e.feature === selectedFeature) return; // don't dim the currently-active region
 				map.data.overrideStyle(e.feature, {
 					fillOpacity: 0.22,
 					strokeWeight: 2,
@@ -642,20 +754,31 @@
 			});
 
 			map.data.addListener('mouseout', (e) => {
-				map.data.revertStyle(e.feature);
 				canvas.style.cursor = '';
 				hideTooltip();
+				if (e.feature === selectedFeature) {
+					// Keep the active region highlighted; just restore the override (might have been lost on transient hover).
+					applySelected(e.feature);
+				} else {
+					map.data.revertStyle(e.feature);
+				}
 			});
 
 			map.data.addListener('click', (e) => {
 				const slug = e.feature.getProperty('slug');
 				const name = e.feature.getProperty('name');
 				if (activeRegionFilter === slug) {
+					// Toggle off — clear selection and filter.
 					applyFilter(activeFilter, '');
 					renderRegionBar('', '');
+					clearSelectedRegion();
 				} else {
+					// Clear previously selected region's highlight before switching.
+					clearSelectedRegion();
 					applyFilter(activeFilter, slug);
 					renderRegionBar(slug, name);
+					selectedFeature = e.feature;
+					applySelected(selectedFeature);
 					const bounds = new google.maps.LatLngBounds();
 					allRegions[slug].polys.forEach((p) => {
 						p.getPath().forEach((latLng) => bounds.extend(latLng));

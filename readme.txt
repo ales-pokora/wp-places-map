@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,11 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.5 =
+* **Dynamický pulse halo na clusterech** — místo statického cyan gradientu na okraji clusteru se teď okolo cluster bublin vlní jemné radiální haló. Dva nezávislé sloty: vždy max 2 cluster bubliny pulzují současně, výběr je náhodný, takže záře "skáče" mezi krajem. Animace 2.4 s ease-out, respektuje `prefers-reduced-motion`.
+* **Vybraný kraj zůstává zvýrazněný** — když uživatel klikne na kraj, jeho silnější fill + 3px stroke + cyan deep barva přetrvávají i po odjezdu myší. Hover na jiný kraj jeho zvýraznění nepřebije; kliknutí na ×ko chip filtru, nebo druhé kliknutí na stejný kraj, zvýraznění zruší.
+* SVG cluster odlehčen — zrušeny statické vnější průhledné prstence, ať dominuje dynamický halo overlay.
 
 = 1.0.4 =
 * **Velký „wow" detail jako popup modal** — kliknutí na marker už neotevírá malé InfoWindow, ale plnohodnotný modální dialog vystředěný na obrazovku. Hero gradient (nebo náhledový obrázek pokud je k zařízení nahraný), velký název, typ badge, kraj, popis v citátovém boxu, ikony pro telefon/e-mail/web/otevírací dobu, dvouvrstvé CTA (velké „Navigovat" + sekundární „Zavolat / Napsat / Web"). Backdrop-blur za modálem, scale+fade animace, zavře se ESC, kliknutím mimo, nebo ×.

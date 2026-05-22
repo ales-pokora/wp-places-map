@@ -737,6 +737,52 @@ body.wppm-modal-locked {
 	box-shadow: 0 12px 36px rgba(27, 43, 58, .18) !important;
 }
 
+/* ---------- Cluster pulse halo ---------- */
+
+.wppm-cluster-halo {
+	position: absolute;
+	pointer-events: none;
+	border-radius: 50%;
+	opacity: 0;
+	transform: scale(0.5);
+	background: radial-gradient(
+		circle at 50% 50%,
+		rgba(65, 200, 244, 0.55) 0%,
+		rgba(65, 200, 244, 0.18) 35%,
+		rgba(65, 200, 244, 0) 62%
+	);
+	will-change: transform, opacity;
+}
+
+.wppm-cluster-halo.is-pulsing {
+	animation: wppm-halo-pulse 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@keyframes wppm-halo-pulse {
+	0% {
+		transform: scale(0.55);
+		opacity: 0;
+	}
+	28% {
+		opacity: 0.85;
+	}
+	60% {
+		opacity: 0.45;
+	}
+	100% {
+		transform: scale(1.6);
+		opacity: 0;
+	}
+}
+
+/* Respect users who turn off motion. */
+@media (prefers-reduced-motion: reduce) {
+	.wppm-cluster-halo.is-pulsing {
+		animation: none;
+		opacity: 0;
+	}
+}
+
 /* ---------- Region overlay ---------- */
 
 .wppm-tooltip {
