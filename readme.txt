@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.15
+Stable tag: 1.0.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,9 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.16 =
+* **Klik na cluster bubble teď drillne do kraje pod ním** — místo zoom-to-fit MarkerClustereru. Praktický důvod: při výchozím CZ-wide zoomu 7 je cluster bublina (56 px) širší než pražský polygon, takže bublina zakrývá Prahu a uživatel nemůže kliknout na polygon. Teď klik na cluster → `activateRegion(slug)` (najde region jehož polygon obsahuje střed clusteru), takže klik na "2" bublinu nad Prahou = klik na Prahu. Fallback na původní fitBounds chování pro clustery mimo známé polygony.
 
 = 1.0.15 =
 * **Klik na Prahu už opravdu vybere Prahu, ne Středočeský.** Středočeský polygon dostal řádný "Praha-shaped" otvor (donut) přes `mapshaper -erase`. Bez otvoru ležel Středočeský geograficky NAD Prahou a Data Layer click hit-test ho dispatchoval místo Prahy.

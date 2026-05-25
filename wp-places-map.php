@@ -3,7 +3,7 @@
  * Plugin Name:       WP Places Map
  * Plugin URI:        https://github.com/ales-pokora/wp-places-map
  * Description:       Interactive Google Map of locations (clinics, hospitals, branches, points of sale — anything). Provides a custom post type, admin UI, CSV import and a [wp_places_map] shortcode. Drop the shortcode anywhere — Divi Text/Code module, Gutenberg block, classic editor, theme template.
- * Version:           1.0.15
+ * Version:           1.0.16
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Aleš Pokora
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPPM_VERSION', '1.0.15' );
+define( 'WPPM_VERSION', '1.0.16' );
 define( 'WPPM_FILE', __FILE__ );
 define( 'WPPM_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WPPM_URL', plugin_dir_url( __FILE__ ) );

@@ -588,6 +588,29 @@
 					map,
 					markers,
 					renderer: clusterRendererFactory(config.clusterColor),
+					// When a cluster bubble visually covers a small kraj (Praha is the obvious
+					// case — at zoom 7 the 56px bubble is wider than the polygon), clicking
+					// the bubble should drill into that kraj rather than zoom-to-fit two pins
+					// half a km apart. We do the lookup against region polygons; if the cluster
+					// centre lies inside one, activateRegion handles the rest.
+					onClusterClick: (_evt, c, m) => {
+						const pos = c && c.position;
+						if (pos && allRegions && google.maps.geometry && google.maps.geometry.poly) {
+							for (const slug in allRegions) {
+								if (!Object.prototype.hasOwnProperty.call(allRegions, slug)) continue;
+								const polys = allRegions[slug].polys;
+								for (let i = 0; i < polys.length; i++) {
+									if (google.maps.geometry.poly.containsLocation(pos, polys[i])) {
+										activateRegion(slug);
+										return;
+									}
+								}
+							}
+						}
+						// Cluster outside any known polygon (shouldn't happen on CZ data but
+						// keep MarkerClusterer's default fallback for safety).
+						if (c && c.bounds) m.fitBounds(c.bounds);
+					},
 				});
 				// Re-sync halo positions every time MarkerClusterer recomputes (zoom/pan).
 				try {
