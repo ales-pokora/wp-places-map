@@ -26,6 +26,8 @@ final class WPPM_Plugin {
 	public function init() {
 		load_plugin_textdomain( 'wp-places-map', false, dirname( WPPM_BASENAME ) . '/languages' );
 
+		$this->maybe_migrate();
+
 		WPPM_CPT::instance()->init();
 		WPPM_Meta::instance()->init();
 		WPPM_Settings::instance()->init();
@@ -35,6 +37,35 @@ final class WPPM_Plugin {
 
 		add_action( 'admin_enqueue_scripts', [ $this, 'admin_assets' ] );
 		add_filter( 'plugin_action_links_' . WPPM_BASENAME, [ $this, 'action_links' ] );
+	}
+
+	/**
+	 * One-shot migrations keyed by the version they ship in. We track the last
+	 * version that ran via the wppm_db_version option; activate() doesn't fire
+	 * on update so a hook on plugins_loaded is the only place we get to run.
+	 *
+	 * - 1.0.17: bump stored default_zoom from 7 to 8. The 7-default was too wide
+	 *   for Praha (the polygon is ~30px wide at z7, smaller than a 44px facility
+	 *   pin) — Praha became almost unclickable as a region once 1.0.14 made it
+	 *   selectable. Only touched when the value still matches the prior default
+	 *   so explicit user choices are preserved.
+	 */
+	private function maybe_migrate() {
+		$current   = WPPM_VERSION;
+		$last_seen = get_option( 'wppm_db_version', '' );
+		if ( $last_seen === $current ) {
+			return;
+		}
+
+		if ( version_compare( $last_seen, '1.0.17', '<' ) ) {
+			$options = (array) get_option( WPPM_OPT, [] );
+			if ( ! empty( $options ) && isset( $options['default_zoom'] ) && (int) $options['default_zoom'] === 7 ) {
+				$options['default_zoom'] = 8;
+				update_option( WPPM_OPT, $options );
+			}
+		}
+
+		update_option( 'wppm_db_version', $current );
 	}
 
 	public static function activate() {
@@ -47,7 +78,7 @@ final class WPPM_Plugin {
 			'api_key'         => '',
 			'default_lat'     => '49.7437',  // Czech Republic centroid
 			'default_lng'     => '15.3386',
-			'default_zoom'    => 7,
+			'default_zoom'    => 8,
 			'brand_color'     => '#41C8F4',
 			'cluster_color'   => '#41C8F4',
 			'map_style'       => 'light',

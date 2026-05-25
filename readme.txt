@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.16
+Stable tag: 1.0.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,10 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.17 =
+* **Výchozí zoom posunut ze 7 na 8** + jednorázová migrace existujících instalací. Při zoomu 7 byla Praha (~30 px na obrazovce) menší než marker pin (34×44 px) — pin pokrýval celý polygon a uživatel neměl kam kliknout. Při zoomu 8 je Praha ~60 px, polygon je viditelný kolem pinu. Migrace upraví uloženou hodnotu **jen** pokud je nastavena na původní default 7 (vlastní volba uživatele se nepřepíše).
+* Verzovaná migrace přes `wppm_db_version` option v `WPPM_Plugin::init()` — bezpečný framework pro budoucí jednorázové datové změny (activate hook nefiruje při update, takže to tady byla díra).
 
 = 1.0.16 =
 * **Klik na cluster bubble teď drillne do kraje pod ním** — místo zoom-to-fit MarkerClustereru. Praktický důvod: při výchozím CZ-wide zoomu 7 je cluster bublina (56 px) širší než pražský polygon, takže bublina zakrývá Prahu a uživatel nemůže kliknout na polygon. Teď klik na cluster → `activateRegion(slug)` (najde region jehož polygon obsahuje střed clusteru), takže klik na "2" bublinu nad Prahou = klik na Prahu. Fallback na původní fitBounds chování pro clustery mimo známé polygony.
