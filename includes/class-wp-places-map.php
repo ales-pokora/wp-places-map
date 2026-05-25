@@ -65,6 +65,20 @@ final class WPPM_Plugin {
 			}
 		}
 
+		// 1.0.18 reverts 1.0.17's zoom bump. The 8-default zoomed too far in for users
+		// who like the CZ-wide overview; instead the Praha count badge/cluster icon
+		// gets nudged off-centre to the NE so the polygon stays visible at zoom 7.
+		// Only reverts when the value is still 8 AND we shipped 1.0.17 on this install
+		// (i.e. WE bumped it). Anyone who landed on 1.0.17 first and then explicitly
+		// chose another zoom is left alone.
+		if ( $last_seen === '1.0.17' ) {
+			$options = (array) get_option( WPPM_OPT, [] );
+			if ( ! empty( $options ) && isset( $options['default_zoom'] ) && (int) $options['default_zoom'] === 8 ) {
+				$options['default_zoom'] = 7;
+				update_option( WPPM_OPT, $options );
+			}
+		}
+
 		update_option( 'wppm_db_version', $current );
 	}
 
@@ -78,7 +92,7 @@ final class WPPM_Plugin {
 			'api_key'         => '',
 			'default_lat'     => '49.7437',  // Czech Republic centroid
 			'default_lng'     => '15.3386',
-			'default_zoom'    => 8,
+			'default_zoom'    => 7,
 			'brand_color'     => '#41C8F4',
 			'cluster_color'   => '#41C8F4',
 			'map_style'       => 'light',

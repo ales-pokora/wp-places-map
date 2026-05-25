@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.17
+Stable tag: 1.0.18
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,11 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.18 =
+* **Zoom 8 byl moc — návrat na 7.** Místo zazoomování celé mapy se teď posunul *jen* indikátor počtu míst v Praze (cluster bublina i region count badge) z geometrického středu na NE okraj polygonu (lat 50.13, lng 14.60, stále uvnitř Prahy). Polygon je tak vidět kolem indikátoru a uživatel může kliknout buď na samotný okraj Prahy nebo na badge — obojí aktivuje Prahu.
+* Mechanika: `label_lng`/`label_lat` v properties Praha feature v GeoJSON, čte `parseRegionPolygons`. `regionCentroid` a `clusterIconPosition` použijí label position pokud existuje. Halo overlay (glow) follow icon position, aby pulsování nesvítilo na prázdné místo.
+* Counter-migrace: instalace co dostaly 1.0.17 auto-bump 7→8 dostanou v 1.0.18 návrat na 7. Pouze pokud uložená hodnota je stále 8 a poslední viděná verze je '1.0.17' (tj. explicitní volba uživatele se nepřepíše).
 
 = 1.0.17 =
 * **Výchozí zoom posunut ze 7 na 8** + jednorázová migrace existujících instalací. Při zoomu 7 byla Praha (~30 px na obrazovce) menší než marker pin (34×44 px) — pin pokrýval celý polygon a uživatel neměl kam kliknout. Při zoomu 8 je Praha ~60 px, polygon je viditelný kolem pinu. Migrace upraví uloženou hodnotu **jen** pokud je nastavena na původní default 7 (vlastní volba uživatele se nepřepíše).

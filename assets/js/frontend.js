@@ -65,11 +65,31 @@
 		return count < 10 ? 56 : count < 50 ? 68 : count < 200 ? 82 : 96;
 	}
 
-	function clusterRendererFactory(brandColor) {
+	function clusterRendererFactory(brandColor, getRegions) {
 		return {
 			render: function (cluster) {
 				const count = cluster.count;
-				const position = cluster.position;
+				let position = cluster.position;
+				// If the cluster's geometric centre lands inside a region with an
+				// explicit labelPos (Praha), render the bubble at that label position
+				// instead. Otherwise the 56 px bubble sits dead-centre on a ~30 px
+				// Praha polygon at default zoom and covers the kraj entirely.
+				const regions = typeof getRegions === 'function' ? getRegions() : null;
+				if (regions && position && google.maps.geometry && google.maps.geometry.poly) {
+					for (const slug in regions) {
+						if (!Object.prototype.hasOwnProperty.call(regions, slug)) continue;
+						const reg = regions[slug];
+						if (!reg.labelPos) continue;
+						const polys = reg.polys || [];
+						for (let i = 0; i < polys.length; i++) {
+							if (google.maps.geometry.poly.containsLocation(position, polys[i])) {
+								position = reg.labelPos;
+								break;
+							}
+						}
+						if (position === reg.labelPos) break;
+					}
+				}
 				const size = clusterSizeFor(count);
 				const r = (size / 2) - 6;
 				const fontSize = Math.max(15, Math.round(size * 0.36));
@@ -431,6 +451,26 @@
 			}
 		}
 
+		// Cluster icons get nudged to a region's labelPos when their centroid lands
+		// inside a region with one set (Praha). Halos must follow the icon, otherwise
+		// the glow pulses on empty space.
+		function clusterIconPosition(c) {
+			const pos = c && c.position;
+			if (!pos || !allRegions || !google.maps.geometry || !google.maps.geometry.poly) return pos;
+			for (const slug in allRegions) {
+				if (!Object.prototype.hasOwnProperty.call(allRegions, slug)) continue;
+				const reg = allRegions[slug];
+				if (!reg.labelPos) continue;
+				const polys = reg.polys || [];
+				for (let i = 0; i < polys.length; i++) {
+					if (google.maps.geometry.poly.containsLocation(pos, polys[i])) {
+						return reg.labelPos;
+					}
+				}
+			}
+			return pos;
+		}
+
 		function syncHalos() {
 			haloOverlays.forEach((h) => h.setMap(null));
 			haloOverlays = [];
@@ -439,7 +479,7 @@
 				if (!c || !c.position) return;
 				const count = c.count || (c.markers ? c.markers.length : 0);
 				if (count <= 1) return;
-				const halo = new WPPMHalo(c.position, clusterSizeFor(count));
+				const halo = new WPPMHalo(clusterIconPosition(c), clusterSizeFor(count));
 				halo.setMap(map);
 				haloOverlays.push(halo);
 			});
@@ -587,7 +627,7 @@
 				cluster = new window.markerClusterer.MarkerClusterer({
 					map,
 					markers,
-					renderer: clusterRendererFactory(config.clusterColor),
+					renderer: clusterRendererFactory(config.clusterColor, () => allRegions),
 					// When a cluster bubble visually covers a small kraj (Praha is the obvious
 					// case — at zoom 7 the 56px bubble is wider than the polygon), clicking
 					// the bubble should drill into that kraj rather than zoom-to-fit two pins
@@ -736,7 +776,16 @@
 						polys.push(new google.maps.Polygon({ paths: p.map(toLatLngs) }));
 					});
 				}
-				out[slug] = { name: name, polys: polys };
+				// Optional explicit label position — used to nudge a region's count badge
+				// (and any cluster bubble that lands inside it) off the geometric centre
+				// for small regions where the bubble would otherwise cover the polygon.
+				// Set on Praha specifically; other regions fall back to the area-weighted centroid.
+				let labelPos = null;
+				const p = f.properties || {};
+				if (typeof p.label_lat === 'number' && typeof p.label_lng === 'number') {
+					labelPos = new google.maps.LatLng(p.label_lat, p.label_lng);
+				}
+				out[slug] = { name: name, polys: polys, labelPos: labelPos };
 			});
 			return out;
 		}
@@ -852,8 +901,14 @@
 		// polygons in the region. Holes contribute negative signed area, so a donut's
 		// centroid is pulled toward the thicker portion — Středočeský's centroid lands
 		// in middle Bohemia (not on top of Praha as bounds.getCenter() would).
+		//
+		// If the region carries an explicit label position (label_lat/label_lng in the
+		// GeoJSON properties) we use that instead — currently set on Praha so the count
+		// badge sits in NE Praha rather than dead-centre on top of the polygon.
 		function regionCentroid(slug) {
-			const polys = (allRegions[slug] || {}).polys || [];
+			const region = allRegions[slug] || {};
+			if (region.labelPos) return region.labelPos;
+			const polys = region.polys || [];
 			if (polys.length === 0) return null;
 
 			let totalA = 0, Cx = 0, Cy = 0;

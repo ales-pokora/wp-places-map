@@ -36,7 +36,7 @@ final class WPPM_Shortcode {
 
 		$atts = shortcode_atts( [
 			'height'  => $settings['height'] ?? 600,
-			'zoom'    => $settings['default_zoom'] ?? 8,
+			'zoom'    => $settings['default_zoom'] ?? 7,
 			'lat'     => $settings['default_lat'] ?? '49.7437',
 			'lng'     => $settings['default_lng'] ?? '15.3386',
 			'type'    => '',

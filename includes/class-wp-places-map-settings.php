@@ -34,7 +34,7 @@ final class WPPM_Settings {
 			'api_key'       => '',
 			'default_lat'   => '49.7437',  // Czech Republic centroid
 			'default_lng'   => '15.3386',
-			'default_zoom'  => 8,
+			'default_zoom'  => 7,
 			'brand_color'   => '#41C8F4',
 			'cluster_color' => '#41C8F4',
 			'map_style'     => 'light',
@@ -91,7 +91,7 @@ final class WPPM_Settings {
 		$out['api_key']       = isset( $input['api_key'] ) ? sanitize_text_field( $input['api_key'] ) : '';
 		$out['default_lat']   = isset( $input['default_lat'] ) ? WPPM_Meta::sanitize( $input['default_lat'], 'coord' ) : '49.7437';
 		$out['default_lng']   = isset( $input['default_lng'] ) ? WPPM_Meta::sanitize( $input['default_lng'], 'coord' ) : '15.3386';
-		$out['default_zoom']  = isset( $input['default_zoom'] ) ? max( 2, min( 20, (int) $input['default_zoom'] ) ) : 8;
+		$out['default_zoom']  = isset( $input['default_zoom'] ) ? max( 2, min( 20, (int) $input['default_zoom'] ) ) : 7;
 		$out['brand_color']   = $this->color( $input['brand_color'] ?? '', '#41C8F4' );
 		$out['cluster_color'] = $this->color( $input['cluster_color'] ?? '', '#41C8F4' );
 		$out['map_style']     = isset( $input['map_style'] ) && in_array( $input['map_style'], [ 'light', 'default', 'silver' ], true ) ? $input['map_style'] : 'light';
@@ -121,7 +121,7 @@ final class WPPM_Settings {
 			'api_key'       => '',
 			'default_lat'   => '49.7437',
 			'default_lng'   => '15.3386',
-			'default_zoom'  => 8,
+			'default_zoom'  => 7,
 			'brand_color'   => '#41C8F4',
 			'cluster_color' => '#41C8F4',
 			'map_style'     => 'light',
@@ -301,7 +301,7 @@ final class WPPM_Settings {
 						<p><?php esc_html_e( 'Vložte shortcode kamkoliv do stránky:', 'wp-places-map' ); ?></p>
 						<code class="wppm-snippet">[wp_places_map]</code>
 						<p style="margin-top:14px;"><?php esc_html_e( 'Volitelné parametry:', 'wp-places-map' ); ?></p>
-						<code class="wppm-snippet">[wp_places_map height="600" zoom="8" filters="yes" cluster="yes"]</code>
+						<code class="wppm-snippet">[wp_places_map height="600" zoom="7" filters="yes" cluster="yes"]</code>
 						<p style="margin-top:14px;"><?php esc_html_e( 'Filtrovat pouze jeden typ:', 'wp-places-map' ); ?></p>
 						<code class="wppm-snippet">[wp_places_map type="nemocnice"]</code>
 					</div>
