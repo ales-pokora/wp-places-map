@@ -703,11 +703,14 @@
 				const polys = [];
 				const g = f.geometry || {};
 				const toLatLngs = (ring) => ring.map((c) => ({ lat: c[1], lng: c[0] }));
+				// Pass every ring (outer + any holes) so google.maps.geometry.poly.containsLocation
+				// respects donut polygons — e.g. Středočeský has a Praha-shaped hole, and a Praha
+				// point must NOT classify as Středočeský.
 				if (g.type === 'Polygon') {
-					polys.push(new google.maps.Polygon({ paths: toLatLngs(g.coordinates[0]) }));
+					polys.push(new google.maps.Polygon({ paths: g.coordinates.map(toLatLngs) }));
 				} else if (g.type === 'MultiPolygon') {
 					g.coordinates.forEach((p) => {
-						polys.push(new google.maps.Polygon({ paths: toLatLngs(p[0]) }));
+						polys.push(new google.maps.Polygon({ paths: p.map(toLatLngs) }));
 					});
 				}
 				out[slug] = { name: name, polys: polys };
@@ -822,12 +825,47 @@
 			);
 		}
 
+		// Area-weighted centroid via the shoelace formula, summed across all rings of all
+		// polygons in the region. Holes contribute negative signed area, so a donut's
+		// centroid is pulled toward the thicker portion — Středočeský's centroid lands
+		// in middle Bohemia (not on top of Praha as bounds.getCenter() would).
 		function regionCentroid(slug) {
 			const polys = (allRegions[slug] || {}).polys || [];
 			if (polys.length === 0) return null;
-			const bounds = new google.maps.LatLngBounds();
-			polys.forEach((p) => p.getPath().forEach((latLng) => bounds.extend(latLng)));
-			return bounds.getCenter();
+
+			let totalA = 0, Cx = 0, Cy = 0;
+			polys.forEach((poly) => {
+				const paths = poly.getPaths();
+				for (let r = 0; r < paths.getLength(); r++) {
+					const ring = paths.getAt(r).getArray();
+					const n = ring.length;
+					if (n < 3) continue;
+					let A = 0, cx = 0, cy = 0;
+					for (let i = 0; i < n; i++) {
+						const p0 = ring[i];
+						const p1 = ring[(i + 1) % n];
+						const cross = p0.lng() * p1.lat() - p1.lng() * p0.lat();
+						A += cross;
+						cx += (p0.lng() + p1.lng()) * cross;
+						cy += (p0.lat() + p1.lat()) * cross;
+					}
+					if (A === 0) continue;
+					// Signed area: outer rings positive (CCW), holes negative (CW) per RFC 7946.
+					// Summing signed contributions naturally subtracts holes from the total.
+					totalA += A;
+					Cx += cx;
+					Cy += cy;
+				}
+			});
+
+			if (totalA === 0) {
+				// Degenerate fallback: bbox center.
+				const bounds = new google.maps.LatLngBounds();
+				polys.forEach((p) => p.getPath().forEach((latLng) => bounds.extend(latLng)));
+				return bounds.getCenter();
+			}
+			// Shoelace formula: centroid = sum((p0 + p1) * cross) / (6 * A)
+			return new google.maps.LatLng(Cy / (3 * totalA), Cx / (3 * totalA));
 		}
 
 		function buildRegionBadges() {
