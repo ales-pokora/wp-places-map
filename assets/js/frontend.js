@@ -266,27 +266,29 @@
 			meta.appendChild(item);
 		});
 
-		// Actions: primary "Navigate" + secondaries (Call, Email, Web).
+		// Actions: primary "Navštívit web" (only when a website exists) + secondaries (Call, Email, Navigate).
 		actions.innerHTML = '';
 		const destParts = [facility.title, addrLine].filter(Boolean).join(', ');
 		const dest = encodeURIComponent(destParts || (facility.lat + ',' + facility.lng));
 
-		const cta = document.createElement('a');
-		cta.className = 'wppm-modal-cta';
-		cta.href = 'https://www.google.com/maps/dir/?api=1&destination=' + dest;
-		cta.target = '_blank';
-		cta.rel = 'noopener';
-		cta.innerHTML =
-			'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>' +
-			'<span></span>';
-		cta.querySelector('span').textContent = i18n.navigate;
-		actions.appendChild(cta);
+		if (facility.website) {
+			const cta = document.createElement('a');
+			cta.className = 'wppm-modal-cta';
+			cta.href = facility.website;
+			cta.target = '_blank';
+			cta.rel = 'noopener';
+			cta.innerHTML =
+				'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
+				'<span></span>';
+			cta.querySelector('span').textContent = i18n.webCta;
+			actions.appendChild(cta);
+		}
 
-		// Optional secondary actions.
+		// Secondary actions — Navigovat now lives here alongside phone/e-mail.
 		const secondaries = [];
 		if (facility.phone) secondaries.push({ label: i18n.phone, href: 'tel:' + facility.phone.replace(/\s+/g, '') });
 		if (facility.email) secondaries.push({ label: i18n.email, href: 'mailto:' + facility.email });
-		if (facility.website) secondaries.push({ label: i18n.webCta, href: facility.website, external: true });
+		secondaries.push({ label: i18n.navigate, href: 'https://www.google.com/maps/dir/?api=1&destination=' + dest, external: true });
 
 		if (secondaries.length) {
 			const row = document.createElement('div');

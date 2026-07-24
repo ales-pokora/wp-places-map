@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.19
+Stable tag: 1.0.20
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,10 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.20 =
+* **Hlavní CTA v detailu zařízení je nyní „Navštívit web" místo „Navigovat".** Primární tlačítko modálu odkazuje na web zařízení a zobrazí se **pouze** když má zařízení vyplněný web (jinak žádné primární tlačítko). „Navigovat" (trasa přes Google Maps) se přesunulo do sekundární řady akcí vedle telefonu a e-mailu.
+* Opravuje 1.0.19, kde se omylem přejmenoval jen sekundární odkaz na web; primární CTA zůstávalo „Navigovat". Klíč `webCta` teď pohání primární tlačítko, sdílený klíč `web` dál popisuje info řádek.
 
 = 1.0.19 =
 * **CTA „Web" v detailu zařízení přejmenováno na „Navštívit web".** Tlačítko akce (sekundární řada Telefon / E-mail / Web) v modálním detailu místa nyní jasně vybízí k akci. Info řádek s ikonou glóbu zůstává popsán „Web" + název domény, aby se popisek nepletl s hodnotou.
