@@ -106,6 +106,7 @@ final class WPPM_Shortcode {
 				'phone'         => __( 'Telefon', 'wp-places-map' ),
 				'email'         => __( 'E-mail', 'wp-places-map' ),
 				'web'           => __( 'Web', 'wp-places-map' ),
+				'webCta'        => __( 'Navštívit web', 'wp-places-map' ),
 				'hours'         => __( 'Otevírací doba', 'wp-places-map' ),
 				'navigate'      => __( 'Navigovat', 'wp-places-map' ),
 				'placesCount'   => __( 'zařízení', 'wp-places-map' ),

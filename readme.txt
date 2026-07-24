@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.18
+Stable tag: 1.0.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,10 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.19 =
+* **CTA „Web" v detailu zařízení přejmenováno na „Navštívit web".** Tlačítko akce (sekundární řada Telefon / E-mail / Web) v modálním detailu místa nyní jasně vybízí k akci. Info řádek s ikonou glóbu zůstává popsán „Web" + název domény, aby se popisek nepletl s hodnotou.
+* Mechanika: nový i18n klíč `webCta` ve `WPPM_Shortcode::render()`, `frontend.js` ho čte pro sekundární akci webu (`config.i18n.webCta`). Sdílený klíč `web` zůstal beze změny pro popisek meta řádku.
 
 = 1.0.18 =
 * **Zoom 8 byl moc — návrat na 7.** Místo zazoomování celé mapy se teď posunul *jen* indikátor počtu míst v Praze (cluster bublina i region count badge) z geometrického středu na NE okraj polygonu (lat 50.13, lng 14.60, stále uvnitř Prahy). Polygon je tak vidět kolem indikátoru a uživatel může kliknout buď na samotný okraj Prahy nebo na badge — obojí aktivuje Prahu.

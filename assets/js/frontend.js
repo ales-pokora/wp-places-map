@@ -286,7 +286,7 @@
 		const secondaries = [];
 		if (facility.phone) secondaries.push({ label: i18n.phone, href: 'tel:' + facility.phone.replace(/\s+/g, '') });
 		if (facility.email) secondaries.push({ label: i18n.email, href: 'mailto:' + facility.email });
-		if (facility.website) secondaries.push({ label: i18n.web, href: facility.website, external: true });
+		if (facility.website) secondaries.push({ label: i18n.webCta, href: facility.website, external: true });
 
 		if (secondaries.length) {
 			const row = document.createElement('div');
