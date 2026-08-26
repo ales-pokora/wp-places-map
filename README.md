@@ -36,6 +36,48 @@ Interactive Google Map of locations (clinics, hospitals, branches, offices, poin
 | `cluster` | `yes` | Cluster overlapping markers when zoomed out. |
 | `class` | – | Extra CSS class on the wrapper. |
 
+## Feeding the map from another post type
+
+By default the map reads the plugin's own `wppm_place` CPT. When a site already
+has its locations in a post type of its own, five filters let the map read that
+instead, so the data doesn't have to live in two places:
+
+| Filter | Signature | Purpose |
+|---|---|---|
+| `wppm_facilities_query_args` | `($args, $type)` | Point `WP_Query` at another post type. |
+| `wppm_facility` | `($row, $post)` | Build one place yourself. Return an array to use it, `null` to fall through. Runs **before** the GPS check, so you can supply coordinates from your own meta keys. |
+| `wppm_facilities` | `($out, $type)` | Last look at the whole collection before caching. |
+| `wppm_cache_post_types` | `($types)` | Post types whose saves bust the places cache. |
+| `wppm_filter_terms` | `($terms, $atts)` | Supply the type pills; a foreign source has no terms in `wppm_place_type`. |
+
+A place row needs at minimum `id`, `title`, `lat`, `lng`. Rows without usable
+coordinates are dropped. Optional keys: `type`, `type_label`, `address`, `city`,
+`zip`, `phone`, `email`, `website`, `hours`, `description`, `image`.
+
+```php
+add_filter( 'wppm_facilities_query_args', function ( $args ) {
+	$args['post_type'] = 'my_clinic';
+	unset( $args['tax_query'] );
+	return $args;
+} );
+
+add_filter( 'wppm_facility', function ( $row, $post ) {
+	if ( $post->post_type !== 'my_clinic' ) {
+		return $row;
+	}
+	return [
+		'id'      => $post->ID,
+		'title'   => get_the_title( $post ),
+		'lat'     => get_post_meta( $post->ID, '_my_lat', true ),
+		'lng'     => get_post_meta( $post->ID, '_my_lng', true ),
+		'address' => get_post_meta( $post->ID, '_my_address', true ),
+		'website' => get_permalink( $post ),
+	];
+}, 10, 2 );
+
+add_filter( 'wppm_cache_post_types', fn( $t ) => array_merge( $t, [ 'my_clinic' ] ) );
+```
+
 ## Release workflow
 
 ```bash

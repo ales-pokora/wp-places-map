@@ -39,7 +39,19 @@ final class WPPM_Meta {
 	public function init() {
 		add_action( 'add_meta_boxes', [ $this, 'register_box' ] );
 		add_action( 'save_post_' . WPPM_CPT, [ $this, 'save' ], 10, 2 );
-		add_action( 'save_post_' . WPPM_CPT, [ $this, 'bust_cache' ], 99 );
+
+		/**
+		 * Post types whose saves invalidate the places cache.
+		 *
+		 * A site feeding the map from another post type via 'wppm_facility'
+		 * should add it here, otherwise edits sit behind the cache for its TTL.
+		 *
+		 * @param string[] $types Post type slugs.
+		 */
+		$cache_types = (array) apply_filters( 'wppm_cache_post_types', [ WPPM_CPT ] );
+		foreach ( $cache_types as $cache_type ) {
+			add_action( 'save_post_' . $cache_type, [ $this, 'bust_cache' ], 99 );
+		}
 		add_action( 'deleted_post', [ $this, 'bust_cache_on_delete' ] );
 	}
 

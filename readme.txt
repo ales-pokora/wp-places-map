@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.21
+Stable tag: 1.0.22
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,15 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.22 =
+* **Mapa umí číst z cizího post typu.** Nové filtry umožní napojit mapu na existujici CPT webu misto vlastniho `wppm_place`, takze data nemusi zit na dvou mistech:
+  * `wppm_facilities_query_args` ($args, $type) — prepne `WP_Query` na jiny post type.
+  * `wppm_facility` ($row, $post) — vrat pole a sestavi se misto vestaveneho ctecky; **bezi pred kontrolou GPS**, takze si zdroj muze dodat souradnice z vlastnich meta klicu. `null` = fallback na vestavene chovani.
+  * `wppm_facilities` ($out, $type) — posledni sahnuti na celou kolekci pred cache a odpovedi.
+  * `wppm_cache_post_types` ($types) — ktere post typy pri ulozeni invaliduji cache mist.
+  * `wppm_filter_terms` ($terms, $atts) — vlastni filtrovaci piluky nad mapou (cizi zdroj nema termy ve `wppm_place_type`).
+* Vestavene cteni mista se vytahlo do `WPPM_Rest::build_facility()`. Zadna zmena chovani pro weby, ktere zadny z filtru nepouzivaji.
 
 = 1.0.21 =
 * **Celý vzhled mapy se teď řídí nastavením „Barva markeru".** Dřív se podle nastavení barvily jen markery, clustery a kraje — filtrační piluky, tlačítka, karty a detailní modál zůstávaly natvrdo tyrkysové. Nově se z jednoho hexu odvodí celá rampa (`--wppm-brand`, `-deep`, `-soft`, `-tint`, `-lift` + `rgb` varianty) a vloží se jako inline styl na `.wppm-wrap` a `.wppm-modal`.

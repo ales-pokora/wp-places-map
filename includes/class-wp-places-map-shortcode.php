@@ -77,6 +77,17 @@ final class WPPM_Shortcode {
 					$terms[] = [ 'slug' => $t->slug, 'label' => $t->name, 'count' => (int) $t->count ];
 				}
 			}
+
+			/**
+			 * Filter the type pills rendered above the map.
+			 *
+			 * A site feeding the map from another post type has no terms in
+			 * WPPM_TAX, so it supplies its own here (or returns [] to hide them).
+			 *
+			 * @param array $terms List of [ 'slug', 'label', 'count' ].
+			 * @param array $atts  Resolved shortcode attributes.
+			 */
+			$terms = (array) apply_filters( 'wppm_filter_terms', $terms, $atts );
 		}
 
 		$config = [

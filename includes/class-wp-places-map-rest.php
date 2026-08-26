@@ -83,50 +83,107 @@ final class WPPM_Rest {
 			];
 		}
 
+		/**
+		 * Filter the WP_Query args used to collect places.
+		 *
+		 * Lets a site point the map at a different post type entirely. Pair with
+		 * the 'wppm_facility' filter to map that post type's meta onto the shape
+		 * the frontend expects.
+		 *
+		 * @param array  $args Query args.
+		 * @param string $type Requested taxonomy term slug, or '' for all.
+		 */
+		$args = apply_filters( 'wppm_facilities_query_args', $args, $type );
+
 		$query = new WP_Query( $args );
 		$out   = [];
 
 		foreach ( $query->posts as $post ) {
-			$lat = get_post_meta( $post->ID, '_wppm_lat', true );
-			$lng = get_post_meta( $post->ID, '_wppm_lng', true );
-			if ( $lat === '' || $lng === '' ) {
-				continue; // facilities without GPS aren't rendered
+			/**
+			 * Short-circuit how a single place is assembled.
+			 *
+			 * Return an array to use it verbatim, or null to fall through to the
+			 * built-in reader. Runs *before* the GPS check, so an alternative
+			 * source is free to supply coordinates from its own meta keys.
+			 *
+			 * @param array|null $row  Assembled place, or null when unhandled.
+			 * @param WP_Post    $post Source post.
+			 */
+			$row = apply_filters( 'wppm_facility', null, $post );
+
+			if ( ! is_array( $row ) ) {
+				$row = $this->build_facility( $post );
 			}
 
-			$terms = wp_get_post_terms( $post->ID, WPPM_TAX, [ 'fields' => 'all' ] );
-			$type_slug  = '';
-			$type_label = '';
-			if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
-				$type_slug  = $terms[0]->slug;
-				$type_label = $terms[0]->name;
+			// isset() already rules out null coordinates.
+			if ( ! is_array( $row ) || ! isset( $row['lat'], $row['lng'] ) ) {
+				continue;
+			}
+			if ( $row['lat'] === '' || $row['lng'] === '' ) {
+				continue; // places without GPS aren't rendered
 			}
 
-			$thumb = get_the_post_thumbnail_url( $post->ID, 'medium' );
+			$row['lat'] = (float) $row['lat'];
+			$row['lng'] = (float) $row['lng'];
 
-			$out[] = [
-				'id'         => $post->ID,
-				'title'      => get_the_title( $post ),
-				'lat'        => (float) $lat,
-				'lng'        => (float) $lng,
-				'type'       => $type_slug,
-				'type_label' => $type_label,
-				'address'    => get_post_meta( $post->ID, '_wppm_address', true ),
-				'city'       => get_post_meta( $post->ID, '_wppm_city', true ),
-				'zip'        => get_post_meta( $post->ID, '_wppm_zip', true ),
-				'phone'      => get_post_meta( $post->ID, '_wppm_phone', true ),
-				'email'      => get_post_meta( $post->ID, '_wppm_email', true ),
-				'website'    => get_post_meta( $post->ID, '_wppm_website', true ),
-				'hours'      => get_post_meta( $post->ID, '_wppm_hours', true ),
-				'description'=> wp_strip_all_tags( $post->post_content ),
-				'image'      => $thumb ? $thumb : '',
-			];
+			$out[] = $row;
 		}
+
+		/**
+		 * Filter the assembled place collection before it is cached and returned.
+		 *
+		 * @param array  $out  List of places.
+		 * @param string $type Requested taxonomy term slug, or '' for all.
+		 */
+		$out = apply_filters( 'wppm_facilities', $out, $type );
 
 		if ( empty( $type ) ) {
 			set_transient( WPPM_CACHE_KEY, $out, self::CACHE_TTL );
 		}
 
 		return rest_ensure_response( $out );
+	}
+
+	/**
+	 * Read one place from the plugin's own post type and meta keys.
+	 *
+	 * @param WP_Post $post Source post.
+	 * @return array|null Null when the place has no usable coordinates.
+	 */
+	private function build_facility( $post ) {
+		$lat = get_post_meta( $post->ID, '_wppm_lat', true );
+		$lng = get_post_meta( $post->ID, '_wppm_lng', true );
+		if ( $lat === '' || $lng === '' ) {
+			return null;
+		}
+
+		$terms      = wp_get_post_terms( $post->ID, WPPM_TAX, [ 'fields' => 'all' ] );
+		$type_slug  = '';
+		$type_label = '';
+		if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
+			$type_slug  = $terms[0]->slug;
+			$type_label = $terms[0]->name;
+		}
+
+		$thumb = get_the_post_thumbnail_url( $post->ID, 'medium' );
+
+		return [
+			'id'          => $post->ID,
+			'title'       => get_the_title( $post ),
+			'lat'         => $lat,
+			'lng'         => $lng,
+			'type'        => $type_slug,
+			'type_label'  => $type_label,
+			'address'     => get_post_meta( $post->ID, '_wppm_address', true ),
+			'city'        => get_post_meta( $post->ID, '_wppm_city', true ),
+			'zip'         => get_post_meta( $post->ID, '_wppm_zip', true ),
+			'phone'       => get_post_meta( $post->ID, '_wppm_phone', true ),
+			'email'       => get_post_meta( $post->ID, '_wppm_email', true ),
+			'website'     => get_post_meta( $post->ID, '_wppm_website', true ),
+			'hours'       => get_post_meta( $post->ID, '_wppm_hours', true ),
+			'description' => wp_strip_all_tags( $post->post_content ),
+			'image'       => $thumb ? $thumb : '',
+		];
 	}
 
 	public function geocode( WP_REST_Request $req ) {
