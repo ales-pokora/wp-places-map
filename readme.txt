@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.22
+Stable tag: 1.0.23
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,9 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.23 =
+* **Opraveno: prazdny stitek typu v detailu mista.** Skryvani volitelnych casti modalu (stitek typu, radek kraje, popis) se dela pres atribut `hidden`, ale `.wppm-modal-badge` a `.wppm-modal-region` maji vlastni `display`, ktere `hidden` prebije — misto skryti zustala prazdna zelena "pilulka". Nove `[hidden]` uvnitr `.wppm-wrap` a `.wppm-modal` vyhrava.
 
 = 1.0.22 =
 * **Mapa umí číst z cizího post typu.** Nové filtry umožní napojit mapu na existujici CPT webu misto vlastniho `wppm_place`, takze data nemusi zit na dvou mistech:

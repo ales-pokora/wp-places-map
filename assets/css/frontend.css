@@ -432,6 +432,15 @@
 }
 
 .wppm-modal[hidden] { display: none; }
+
+/* The hidden attribute is how JS empties out optional parts of the UI (type
+   badge, region line, description). Several of them carry an explicit display
+   rule, which outranks the UA's [hidden] and leaves an empty pill or gap
+   behind — so make hidden win inside the plugin's own subtrees. */
+.wppm-wrap [hidden],
+.wppm-modal [hidden] {
+	display: none !important;
+}
 .wppm-modal.is-open { opacity: 1; }
 
 .wppm-modal-backdrop {
