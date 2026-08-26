@@ -4,7 +4,7 @@ Tags: map, google maps, locations, places, custom post type
 Requires at least: 5.8
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.20
+Stable tag: 1.0.21
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,6 +83,12 @@ REST endpoint vrací všechna místa najednou s 5-min cache. Pro >5 000 markerů
 Ano, plugin je plně univerzální. Stačí změnit barvu markeru v **Nastavení** podle vaší značky.
 
 == Changelog ==
+
+= 1.0.21 =
+* **Celý vzhled mapy se teď řídí nastavením „Barva markeru".** Dřív se podle nastavení barvily jen markery, clustery a kraje — filtrační piluky, tlačítka, karty a detailní modál zůstávaly natvrdo tyrkysové. Nově se z jednoho hexu odvodí celá rampa (`--wppm-brand`, `-deep`, `-soft`, `-tint`, `-lift` + `rgb` varianty) a vloží se jako inline styl na `.wppm-wrap` a `.wppm-modal`.
+* Mechanika: `WPPM_Shortcode::brand_palette()` převede hex do HSL, podrží odstín a sytost a posune jen světlost. `deep` a `lift` jsou **relativní** k světlosti značky (jinak by u tmavých barev vyšel „deep" světlejší než samotná značka), `soft` a `tint` jsou absolutní bledé nádechy s omezenou sytostí. Poměry reprodukují původní tyrkysovou rampu.
+* **Beze změny pro weby na výchozí barvě.** Když je `brand_color` stále `#41C8F4`, nevloží se nic a platí literály z `frontend.css`.
+* Opraveno: konstanta `WPPM_VERSION` zůstala viset na `1.0.18`, takže po aktualizaci na 1.0.19/1.0.20 mohly prohlížeče servírovat CSS a JS z cache. Nyní odpovídá hlavičce.
 
 = 1.0.20 =
 * **Hlavní CTA v detailu zařízení je nyní „Navštívit web" místo „Navigovat".** Primární tlačítko modálu odkazuje na web zařízení a zobrazí se **pouze** když má zařízení vyplněný web (jinak žádné primární tlačítko). „Navigovat" (trasa přes Google Maps) se přesunulo do sekundární řady akcí vedle telefonu a e-mailu.

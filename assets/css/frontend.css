@@ -1,6 +1,7 @@
 /* Places Map — frontend styles
- * Palette: cyan #41C8F4 (primary), ink #1B2B3A, grey60 #647387, cool grey #F5F8FA,
- * border grey #E8EBEF, cyan tint #EAF7FD.
+ * Palette: brand #41C8F4 (default; overridden per-site from the "Barva markeru"
+ * setting), ink #1B2B3A, grey60 #647387, cool grey #F5F8FA, border grey #E8EBEF.
+ * Brand-derived colours must go through the --wppm-brand* ramp, never a literal.
  */
 
 .wppm-wrap {
@@ -8,6 +9,12 @@
 	--wppm-brand-deep: #0A6FA0;
 	--wppm-brand-soft: #D6F1FB;
 	--wppm-brand-tint: #EAF7FD;
+	--wppm-brand-lift: #5BD7FF;
+	/* rgb triplets so alpha variants can reuse the ramp; PHP overrides all of these
+	   from the "Barva markeru" setting when it differs from the shipped default. */
+	--wppm-brand-rgb: 65, 200, 244;
+	--wppm-brand-deep-rgb: 10, 111, 160;
+	--wppm-brand-lift-rgb: 91, 215, 255;
 	--wppm-ink: #1B2B3A;
 	--wppm-grey60: #647387;
 	--wppm-cool: #F5F8FA;
@@ -84,7 +91,7 @@
 .wppm-search-input:focus {
 	outline: none;
 	border-color: var(--wppm-brand) !important;
-	box-shadow: 0 0 0 3px rgba(65, 200, 244, .2);
+	box-shadow: 0 0 0 3px rgba(var(--wppm-brand-rgb), .2);
 }
 
 /* Hide the native WebKit search input "x" cross — we render our own. */
@@ -176,7 +183,7 @@
 	background: var(--wppm-brand);
 	border-color: var(--wppm-brand);
 	color: #fff;
-	box-shadow: 0 2px 10px rgba(65, 200, 244, .35);
+	box-shadow: 0 2px 10px rgba(var(--wppm-brand-rgb), .35);
 }
 
 .wppm-filter-count {
@@ -412,6 +419,12 @@
 	--wppm-brand-deep: #0A6FA0;
 	--wppm-brand-soft: #D6F1FB;
 	--wppm-brand-tint: #EAF7FD;
+	--wppm-brand-lift: #5BD7FF;
+	/* rgb triplets so alpha variants can reuse the ramp; PHP overrides all of these
+	   from the "Barva markeru" setting when it differs from the shipped default. */
+	--wppm-brand-rgb: 65, 200, 244;
+	--wppm-brand-deep-rgb: 10, 111, 160;
+	--wppm-brand-lift-rgb: 91, 215, 255;
 	--wppm-ink: #1B2B3A;
 	--wppm-grey60: #647387;
 	--wppm-cool: #F5F8FA;
@@ -437,7 +450,7 @@
 	border-radius: 24px;
 	box-shadow:
 		0 24px 64px -16px rgba(27, 43, 58, 0.35),
-		0 8px 24px -8px rgba(10, 111, 160, 0.18),
+		0 8px 24px -8px rgba(var(--wppm-brand-deep-rgb), 0.18),
 		0 0 0 1px rgba(255, 255, 255, 0.6) inset;
 	overflow: hidden;
 	display: flex;
@@ -459,8 +472,8 @@
 	position: relative;
 	height: 168px;
 	background:
-		radial-gradient(120% 80% at 20% 0%, rgba(91, 215, 255, 0.55) 0%, rgba(65, 200, 244, 0.0) 60%),
-		radial-gradient(140% 100% at 100% 100%, rgba(10, 111, 160, 0.5) 0%, rgba(10, 111, 160, 0.0) 55%),
+		radial-gradient(120% 80% at 20% 0%, rgba(var(--wppm-brand-lift-rgb), 0.55) 0%, rgba(var(--wppm-brand-rgb), 0.0) 60%),
+		radial-gradient(140% 100% at 100% 100%, rgba(var(--wppm-brand-deep-rgb), 0.5) 0%, rgba(var(--wppm-brand-deep-rgb), 0.0) 55%),
 		linear-gradient(135deg, var(--wppm-brand) 0%, var(--wppm-brand-deep) 100%);
 	overflow: hidden;
 	flex-shrink: 0;
@@ -543,7 +556,7 @@
 	padding: 5px 12px;
 	border-radius: 999px;
 	margin-bottom: 10px;
-	border: 1px solid rgba(65, 200, 244, 0.2);
+	border: 1px solid rgba(var(--wppm-brand-rgb), 0.2);
 }
 
 .wppm-modal-title {
@@ -685,13 +698,13 @@ a.wppm-modal-meta-value:hover {
 	font-weight: 600;
 	letter-spacing: 0.01em;
 	text-decoration: none !important;
-	box-shadow: 0 8px 18px -6px rgba(65, 200, 244, 0.55), 0 4px 8px -4px rgba(10, 111, 160, 0.4);
+	box-shadow: 0 8px 18px -6px rgba(var(--wppm-brand-rgb), 0.55), 0 4px 8px -4px rgba(var(--wppm-brand-deep-rgb), 0.4);
 	transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .wppm-modal-cta:hover {
 	transform: translateY(-1px);
-	box-shadow: 0 12px 24px -6px rgba(65, 200, 244, 0.65), 0 6px 12px -4px rgba(10, 111, 160, 0.45);
+	box-shadow: 0 12px 24px -6px rgba(var(--wppm-brand-rgb), 0.65), 0 6px 12px -4px rgba(var(--wppm-brand-deep-rgb), 0.45);
 }
 
 .wppm-modal-cta:active {
@@ -699,7 +712,7 @@ a.wppm-modal-meta-value:hover {
 }
 
 .wppm-modal-cta:focus-visible {
-	outline: 3px solid rgba(65, 200, 244, 0.5);
+	outline: 3px solid rgba(var(--wppm-brand-rgb), 0.5);
 	outline-offset: 3px;
 }
 
@@ -762,9 +775,9 @@ body.wppm-modal-locked {
 	transform: scale(0.5);
 	background: radial-gradient(
 		circle at 50% 50%,
-		rgba(65, 200, 244, 0.55) 0%,
-		rgba(65, 200, 244, 0.18) 35%,
-		rgba(65, 200, 244, 0) 62%
+		rgba(var(--wppm-brand-rgb), 0.55) 0%,
+		rgba(var(--wppm-brand-rgb), 0.18) 35%,
+		rgba(var(--wppm-brand-rgb), 0) 62%
 	);
 	will-change: transform, opacity;
 }
@@ -878,7 +891,7 @@ body.wppm-modal-locked {
 	height: 24px;
 	border-radius: 50%;
 	border: none;
-	background: rgba(10, 111, 160, .12);
+	background: rgba(var(--wppm-brand-deep-rgb), .12);
 	color: var(--wppm-brand-deep);
 	font-size: 16px;
 	line-height: 1;
@@ -891,7 +904,7 @@ body.wppm-modal-locked {
 }
 
 .wppm-region-bar-clear:hover {
-	background: rgba(10, 111, 160, .25);
+	background: rgba(var(--wppm-brand-deep-rgb), .25);
 }
 
 .wppm-region-bar-clear:focus-visible {

@@ -192,6 +192,11 @@ final class WPPM_Shortcode {
 		);
 		wp_enqueue_style( self::HANDLE_CSS );
 
+		$palette = self::brand_palette( $settings['brand_color'] ?? '#41C8F4' );
+		if ( $palette !== '' ) {
+			wp_add_inline_style( self::HANDLE_CSS, ".wppm-wrap,\n.wppm-modal {\n" . $palette . "}\n" );
+		}
+
 		wp_register_script(
 			self::HANDLE_CLUSTER,
 			'https://unpkg.com/@googlemaps/markerclusterer@2.5.3/dist/index.min.js',
@@ -227,5 +232,111 @@ final class WPPM_Shortcode {
 			'before'
 		);
 		wp_enqueue_script( self::HANDLE_GMAPS );
+	}
+	/**
+	 * Derive the full brand ramp from a single hex and return it as CSS custom
+	 * property declarations. Hue and saturation come from the configured colour;
+	 * only lightness is pinned, so any brand hex yields a consistent ramp.
+	 *
+	 * Returns an empty string for the shipped default so sites that never touched
+	 * the setting keep the exact literals declared in frontend.css.
+	 */
+	private static function brand_palette( $hex ) {
+		$hex = sanitize_hex_color( $hex );
+		if ( ! $hex || strtolower( $hex ) === '#41c8f4' ) {
+			return '';
+		}
+
+		list( $h, $s, $l ) = self::hex_to_hsl( $hex );
+
+		// "deep" and "lift" are relative to the brand's own lightness — an absolute
+		// target would render deep *lighter* than the brand for already-dark hexes.
+		// The ratios reproduce the original cyan ramp (L 61% -> deep 33%, lift 68%).
+		// "soft" and "tint" are near-white washes, so they stay absolute; saturation
+		// is capped there to keep pale tints from going neon on vivid brands.
+		$tint_s = min( $s, 0.85 );
+
+		$ramp = [
+			'brand'      => [ $h, $s, $l ],
+			'brand-deep' => [ $h, $s, $l * 0.55 ],
+			'brand-soft' => [ $h, $tint_s, 0.91 ],
+			'brand-tint' => [ $h, $tint_s, 0.96 ],
+			'brand-lift' => [ $h, $s, $l + ( 1 - $l ) * 0.18 ],
+		];
+
+		$css = '';
+		foreach ( $ramp as $name => $hsl ) {
+			list( $r, $g, $b ) = self::hsl_to_rgb( $hsl[0], $hsl[1], $hsl[2] );
+			$css .= sprintf( "\t--wppm-%s: #%02x%02x%02x;\n", $name, $r, $g, $b );
+			$css .= sprintf( "\t--wppm-%s-rgb: %d, %d, %d;\n", $name, $r, $g, $b );
+		}
+
+		return $css;
+	}
+
+	private static function hex_to_hsl( $hex ) {
+		$hex = ltrim( $hex, '#' );
+		if ( strlen( $hex ) === 3 ) {
+			$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+		}
+		$r = hexdec( substr( $hex, 0, 2 ) ) / 255;
+		$g = hexdec( substr( $hex, 2, 2 ) ) / 255;
+		$b = hexdec( substr( $hex, 4, 2 ) ) / 255;
+
+		$max = max( $r, $g, $b );
+		$min = min( $r, $g, $b );
+		$l   = ( $max + $min ) / 2;
+		$d   = $max - $min;
+
+		if ( $d == 0.0 ) {
+			return [ 0.0, 0.0, $l ];
+		}
+
+		$s = $l > 0.5 ? $d / ( 2 - $max - $min ) : $d / ( $max + $min );
+
+		if ( $max === $r ) {
+			$h = ( ( $g - $b ) / $d ) + ( $g < $b ? 6 : 0 );
+		} elseif ( $max === $g ) {
+			$h = ( ( $b - $r ) / $d ) + 2;
+		} else {
+			$h = ( ( $r - $g ) / $d ) + 4;
+		}
+
+		return [ $h / 6, $s, $l ];
+	}
+
+	private static function hsl_to_rgb( $h, $s, $l ) {
+		if ( $s == 0.0 ) {
+			$v = (int) round( $l * 255 );
+			return [ $v, $v, $v ];
+		}
+
+		$q = $l < 0.5 ? $l * ( 1 + $s ) : $l + $s - ( $l * $s );
+		$p = 2 * $l - $q;
+
+		return [
+			(int) round( self::hue_to_channel( $p, $q, $h + 1 / 3 ) * 255 ),
+			(int) round( self::hue_to_channel( $p, $q, $h ) * 255 ),
+			(int) round( self::hue_to_channel( $p, $q, $h - 1 / 3 ) * 255 ),
+		];
+	}
+
+	private static function hue_to_channel( $p, $q, $t ) {
+		if ( $t < 0 ) {
+			$t += 1;
+		}
+		if ( $t > 1 ) {
+			$t -= 1;
+		}
+		if ( $t < 1 / 6 ) {
+			return $p + ( $q - $p ) * 6 * $t;
+		}
+		if ( $t < 1 / 2 ) {
+			return $q;
+		}
+		if ( $t < 2 / 3 ) {
+			return $p + ( $q - $p ) * ( 2 / 3 - $t ) * 6;
+		}
+		return $p;
 	}
 }
