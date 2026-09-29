@@ -49,16 +49,86 @@
 	let mapsReady = false;
 	const pendingInstances = [];
 
-	function markerSvgDataUri(color) {
+	// glyph: optional SVG path data in a 24×24 stroke-icon grid, drawn white inside
+	// the pin instead of the plain dot. Lets a place carry its own symbol.
+	function markerSvgDataUri(color, glyph) {
 		const c = color || '#41C8F4';
+		const inner = glyph
+			? '<g transform="translate(8 8) scale(0.75)" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+				glyphPaths(glyph) + '</g>'
+			: '<circle cx="17" cy="17" r="7" fill="#ffffff"/>';
 		const svg =
 			'<svg xmlns="http://www.w3.org/2000/svg" width="34" height="44" viewBox="0 0 34 44">' +
 			'<defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%">' +
 			'<feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity="0.25"/></filter></defs>' +
 			'<path filter="url(#s)" fill="' + c + '" d="M17 0C7.6 0 0 7.6 0 17c0 12 17 27 17 27s17-15 17-27C34 7.6 26.4 0 17 0z"/>' +
-			'<circle cx="17" cy="17" r="7" fill="#ffffff"/>' +
+			inner +
 			'</svg>';
 		return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+	}
+
+	// A glyph is one or more path "d" strings separated by "|".
+	function glyphPaths(glyph) {
+		return String(glyph).split('|').map(function (d) {
+			return '<path d="' + escapeHtml(d.trim()) + '"/>';
+		}).join('');
+	}
+
+	function glyphSvg(glyph, size) {
+		return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+			glyphPaths(glyph) + '</svg>';
+	}
+
+	// "#rrggbb" → "r, g, b" for the rgba() ramps in the modal CSS.
+	function hexToRgbTriplet(hex) {
+		const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+		if (!m) return null;
+		const n = parseInt(m[1], 16);
+		return [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(', ');
+	}
+
+	// Current wall-clock time at the places (Czech sites → Europe/Prague) so the
+	// open/closed badge does not depend on the visitor's own time zone.
+	function nowInZone(tz) {
+		try {
+			const parts = new Intl.DateTimeFormat('en-GB', {
+				timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+			}).formatToParts(new Date());
+			const get = (t) => (parts.find((p) => p.type === t) || {}).value;
+			const days = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+			return { day: days[get('weekday')], minutes: (+get('hour') % 24) * 60 + (+get('minute')) };
+		} catch (e) {
+			const d = new Date();
+			return { day: d.getDay() || 7, minutes: d.getHours() * 60 + d.getMinutes() };
+		}
+	}
+
+	function toMinutes(hhmm) {
+		const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm).trim());
+		return m ? (+m[1]) * 60 + (+m[2]) : null;
+	}
+
+	// schedule: { "1": [["07:00","12:00"], …], … } with ISO weekdays 1–7.
+	// Returns { open: bool, until: "HH:MM" } or null when there is no schedule.
+	function openStatus(schedule, tz) {
+		if (!schedule || typeof schedule !== 'object') return null;
+		const now = nowInZone(tz);
+		const ranges = (schedule[now.day] || schedule[String(now.day)] || [])
+			.map((r) => [toMinutes(r[0]), toMinutes(r[1]), r[1]])
+			.filter((r) => r[0] !== null && r[1] !== null)
+			.sort((a, b) => a[0] - b[0]);
+		// Merge touching ranges so 7:00–12:00 + 12:00–14:00 reads "until 14:00".
+		const merged = [];
+		ranges.forEach((r) => {
+			const last = merged[merged.length - 1];
+			if (last && r[0] <= last[1]) {
+				if (r[1] > last[1]) { last[1] = r[1]; last[2] = r[2]; }
+			} else {
+				merged.push(r.slice());
+			}
+		});
+		const current = merged.find((r) => now.minutes >= r[0] && now.minutes < r[1]);
+		return current ? { open: true, until: current[2] } : { open: false };
 	}
 
 	function clusterSizeFor(count) {
@@ -141,6 +211,8 @@
 				'<div class="wppm-modal-hero">' +
 					'<div class="wppm-modal-hero-blob" aria-hidden="true"></div>' +
 					'<div class="wppm-modal-hero-image" aria-hidden="true"></div>' +
+					'<div class="wppm-modal-hero-glyph" aria-hidden="true" hidden></div>' +
+					'<span class="wppm-modal-status" hidden><span class="wppm-modal-status-dot"></span><span class="wppm-modal-status-text"></span></span>' +
 					'<button type="button" class="wppm-modal-close" data-wppm-close aria-label="Zavřít detail">' +
 						'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">' +
 							'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>' +
@@ -153,6 +225,7 @@
 					'<p class="wppm-modal-region" hidden></p>' +
 					'<p class="wppm-modal-desc" hidden></p>' +
 					'<div class="wppm-modal-meta"></div>' +
+					'<div class="wppm-modal-promo" hidden></div>' +
 					'<div class="wppm-modal-actions"></div>' +
 				'</div>' +
 			'</div>';
@@ -179,6 +252,42 @@
 			heroImg.style.backgroundImage = '';
 			heroImg.classList.remove('has-image');
 			card.classList.remove('has-image');
+		}
+
+		// Per-place accent: recolours hero, CTA and icons for this place only
+		// (e.g. a second network of places shown in its own colour).
+		['--wppm-brand', '--wppm-brand-deep', '--wppm-brand-rgb', '--wppm-brand-deep-rgb', '--wppm-brand-lift-rgb', '--wppm-brand-tint']
+			.forEach((v) => card.style.removeProperty(v));
+		const accentRgb = hexToRgbTriplet(facility.accent);
+		if (accentRgb) {
+			const deep = hexToRgbTriplet(facility.accent_deep) ? facility.accent_deep : facility.accent;
+			card.style.setProperty('--wppm-brand', facility.accent);
+			card.style.setProperty('--wppm-brand-deep', deep);
+			card.style.setProperty('--wppm-brand-rgb', accentRgb);
+			card.style.setProperty('--wppm-brand-lift-rgb', accentRgb);
+			card.style.setProperty('--wppm-brand-deep-rgb', hexToRgbTriplet(deep));
+			card.style.setProperty('--wppm-brand-tint', 'rgba(' + accentRgb + ', 0.08)');
+		}
+
+		const heroGlyph = modal.querySelector('.wppm-modal-hero-glyph');
+		if (facility.marker_glyph && !facility.image) {
+			heroGlyph.innerHTML = glyphSvg(facility.marker_glyph, 64);
+			heroGlyph.hidden = false;
+		} else {
+			heroGlyph.innerHTML = '';
+			heroGlyph.hidden = true;
+		}
+
+		const status = modal.querySelector('.wppm-modal-status');
+		const st = openStatus(facility.schedule, i18n.timeZone || 'Europe/Prague');
+		if (st) {
+			status.classList.toggle('is-closed', !st.open);
+			status.querySelector('.wppm-modal-status-text').textContent = st.open
+				? (i18n.openUntil || 'Otevřeno do') + ' ' + st.until
+				: (i18n.closed || 'Zavřeno');
+			status.hidden = false;
+		} else {
+			status.hidden = true;
 		}
 
 		if (facility.type_label) {
@@ -233,7 +342,9 @@
 				href: 'mailto:' + facility.email,
 			});
 		}
-		if (facility.website) {
+		// With a custom CTA label the website is the place's own detail page, which
+		// the CTA already links to — listing it again as "Web" would be noise.
+		if (facility.website && !facility.cta_label) {
 			rows.push({
 				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
 				label: i18n.web,
@@ -242,7 +353,14 @@
 				external: true,
 			});
 		}
-		if (facility.hours) {
+		const table = facility.hours_table;
+		if (table && Array.isArray(table.rows) && table.rows.length) {
+			rows.push({
+				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+				label: i18n.hours,
+				table: table,
+			});
+		} else if (facility.hours) {
 			rows.push({
 				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
 				label: i18n.hours,
@@ -252,8 +370,27 @@
 		}
 		rows.forEach((row) => {
 			const item = document.createElement('div');
-			item.className = 'wppm-modal-meta-row' + (row.pre ? ' is-pre' : '');
+			item.className = 'wppm-modal-meta-row' + (row.pre ? ' is-pre' : '') + (row.table ? ' is-table' : '');
 			const labelHtml = '<span class="wppm-modal-meta-label">' + escapeHtml(row.label) + '</span>';
+			if (row.table) {
+				const cols = Array.isArray(row.table.columns) ? row.table.columns : [];
+				let html = '<table class="wppm-hours-table">';
+				if (cols.length) {
+					html += '<thead><tr><th scope="col"><span class="screen-reader-text">Den</span></th>' +
+						cols.map((c) => '<th scope="col">' + escapeHtml(c) + '</th>').join('') + '</tr></thead>';
+				}
+				html += '<tbody>' + row.table.rows.map((r) => {
+					const cells = (r.cells || []).map((c) => c
+						? '<td>' + escapeHtml(c) + '</td>'
+						: '<td class="is-empty">—</td>').join('');
+					return '<tr><th scope="row">' + escapeHtml(r.day || '') + '</th>' + cells + '</tr>';
+				}).join('') + '</tbody></table>';
+				item.innerHTML =
+					'<span class="wppm-modal-meta-icon">' + row.icon + '</span>' +
+					'<span class="wppm-modal-meta-text">' + labelHtml + html + '</span>';
+				meta.appendChild(item);
+				return;
+			}
 			const valueHtml = row.pre
 				? '<pre class="wppm-modal-meta-pre"></pre>'
 				: (row.href
@@ -266,6 +403,26 @@
 			meta.appendChild(item);
 		});
 
+		// Promo: optional highlighted call-out (e.g. "accepting new patients").
+		const promo = modal.querySelector('.wppm-modal-promo');
+		const p = facility.promo;
+		if (p && (p.title || p.text)) {
+			promo.innerHTML =
+				'<div class="wppm-modal-promo-text"><strong></strong><span></span></div>' +
+				(p.button_label && p.button_url ? '<a class="wppm-modal-promo-btn"></a>' : '');
+			promo.querySelector('strong').textContent = p.title || '';
+			promo.querySelector('span').textContent = p.text || '';
+			const btn = promo.querySelector('.wppm-modal-promo-btn');
+			if (btn) {
+				btn.href = p.button_url;
+				btn.textContent = p.button_label;
+			}
+			promo.hidden = false;
+		} else {
+			promo.innerHTML = '';
+			promo.hidden = true;
+		}
+
 		// Actions: primary "Navštívit web" (only when a website exists) + secondaries (Call, Email, Navigate).
 		actions.innerHTML = '';
 		const destParts = [facility.title, addrLine].filter(Boolean).join(', ');
@@ -275,12 +432,16 @@
 			const cta = document.createElement('a');
 			cta.className = 'wppm-modal-cta';
 			cta.href = facility.website;
-			cta.target = '_blank';
-			cta.rel = 'noopener';
-			cta.innerHTML =
-				'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
+			// Links back into this site open in place; anything else in a new tab.
+			if (hostnameOf(facility.website) !== hostnameOf(window.location.href)) {
+				cta.target = '_blank';
+				cta.rel = 'noopener';
+			}
+			cta.innerHTML = facility.cta_label
+				? '<span></span>'
+				: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
 				'<span></span>';
-			cta.querySelector('span').textContent = i18n.webCta;
+			cta.querySelector('span').textContent = facility.cta_label || i18n.webCta;
 			actions.appendChild(cta);
 		}
 
@@ -346,11 +507,21 @@
 			return;
 		}
 
-		const markerIcon = {
-			url: markerSvgDataUri(config.brandColor),
-			scaledSize: new google.maps.Size(34, 44),
-			anchor: new google.maps.Point(17, 44),
-		};
+		// One icon per colour/glyph pair; places without their own use the brand pin.
+		const iconCache = {};
+		function iconFor(f) {
+			const color = hexToRgbTriplet(f.marker_color) ? f.marker_color : config.brandColor;
+			const glyph = f.marker_glyph || '';
+			const key = color + '|' + glyph;
+			if (!iconCache[key]) {
+				iconCache[key] = {
+					url: markerSvgDataUri(color, glyph),
+					scaledSize: new google.maps.Size(34, 44),
+					anchor: new google.maps.Point(17, 44),
+				};
+			}
+			return iconCache[key];
+		}
 
 		// Build detail modal once, append to <body> so transformed ancestors
 		// (e.g. Divi sections) don't break position: fixed.
@@ -611,7 +782,7 @@
 				const marker = new google.maps.Marker({
 					position: { lat: f.lat, lng: f.lng },
 					title: f.title,
-					icon: markerIcon,
+					icon: iconFor(f),
 					optimized: true,
 				});
 				marker.addListener('click', () => openDetail(f));

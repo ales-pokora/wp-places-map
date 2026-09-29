@@ -684,6 +684,140 @@ a.wppm-modal-meta-value:hover {
 	line-height: 1.45;
 }
 
+/* Opening hours as a day × column table (facility.hours_table) */
+
+.wppm-hours-table {
+	width: 100%;
+	margin: 6px 0 0;
+	border-collapse: collapse;
+	border: none;
+	font-size: 13.5px;
+	line-height: 1.4;
+	color: var(--wppm-ink);
+}
+
+.wppm-hours-table th,
+.wppm-hours-table td {
+	padding: 6px 8px 6px 0;
+	border: none;
+	border-bottom: 1px solid var(--wppm-border);
+	text-align: left;
+	vertical-align: top;
+}
+
+.wppm-hours-table thead th {
+	padding-top: 0;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--wppm-grey60);
+}
+
+.wppm-hours-table tbody th {
+	width: 34px;
+	font-weight: 700;
+}
+
+.wppm-hours-table tbody tr:last-child th,
+.wppm-hours-table tbody tr:last-child td { border-bottom: none; }
+
+.wppm-hours-table td.is-empty { color: var(--wppm-grey60); }
+
+.wppm-modal .screen-reader-text {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(1px, 1px, 1px, 1px);
+}
+
+/* Hero glyph + open/closed status (facility.marker_glyph, facility.schedule) */
+
+.wppm-modal-hero-glyph {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	opacity: 0.92;
+	pointer-events: none;
+}
+
+.wppm-modal-status {
+	position: absolute;
+	top: 14px;
+	left: 14px;
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 6px 12px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.95);
+	color: var(--wppm-brand-deep);
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.wppm-modal-status-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--wppm-brand);
+}
+
+.wppm-modal-status.is-closed { color: var(--wppm-grey60); }
+.wppm-modal-status.is-closed .wppm-modal-status-dot { background: var(--wppm-grey60); }
+
+/* Promo call-out (facility.promo) */
+
+.wppm-modal-promo {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin: -8px 0 20px;
+	padding: 16px 18px;
+	border-radius: 12px;
+	background: var(--wppm-brand-tint);
+	border: 1px solid rgba(var(--wppm-brand-rgb), 0.3);
+}
+
+.wppm-modal-promo-text {
+	display: flex;
+	flex-direction: column;
+	font-size: 14.5px;
+	color: var(--wppm-ink);
+}
+
+.wppm-modal-promo-text strong {
+	color: var(--wppm-brand-deep);
+	font-size: 15.5px;
+}
+
+.wppm-modal-promo-btn {
+	flex-shrink: 0;
+	padding: 10px 16px;
+	border-radius: 8px;
+	background: var(--wppm-brand);
+	color: #fff !important;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	text-decoration: none !important;
+}
+
+.wppm-modal-promo-btn:hover { background: var(--wppm-brand-deep); }
+
+@media (max-width: 420px) {
+	.wppm-modal-promo { flex-direction: column; align-items: stretch; text-align: left; }
+	.wppm-modal-promo-btn { text-align: center; }
+}
+
 /* Actions */
 
 .wppm-modal-actions {

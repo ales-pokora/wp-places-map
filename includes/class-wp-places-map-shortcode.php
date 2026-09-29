@@ -128,6 +128,9 @@ final class WPPM_Shortcode {
 				'searchClear'   => __( 'Zrušit hledání', 'wp-places-map' ),
 				'searchNoMatch' => __( 'Žádné zařízení neodpovídá hledání.', 'wp-places-map' ),
 				'resultsShown'  => __( 'Zobrazeno %1$d z %2$d zařízení', 'wp-places-map' ),
+				'openUntil'     => __( 'Otevřeno do', 'wp-places-map' ),
+				'closed'        => __( 'Zavřeno', 'wp-places-map' ),
+				'timeZone'      => wp_timezone_string(),
 			],
 		];
 
