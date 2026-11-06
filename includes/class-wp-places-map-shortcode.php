@@ -44,6 +44,9 @@ final class WPPM_Shortcode {
 			'cluster' => ( ! empty( $settings['cluster'] ) ) ? 'yes' : 'no',
 			'regions' => ( ! empty( $settings['show_regions'] ) ) ? 'yes' : 'no',
 			'search'  => ( ! empty( $settings['show_search'] ) ) ? 'yes' : 'no',
+			// Comma-separated place IDs: show only these and centre the map on them
+			// (e.g. one place on its own detail page).
+			'places'  => '',
 			'class'   => '',
 		], $atts, 'wp_places_map' );
 
@@ -109,6 +112,7 @@ final class WPPM_Shortcode {
 			'regionsUrl'     => esc_url_raw( WPPM_URL . 'assets/geojson/cz-kraje.geojson' ),
 			'regionColor'    => $settings['region_color'] ?? '#41C8F4',
 			'search'         => $this->bool( $atts['search'] ),
+			'placeIds'       => array_values( array_filter( array_map( 'absint', explode( ',', (string) $atts['places'] ) ) ) ),
 			'i18n'           => [
 				'all'           => __( 'Vše', 'wp-places-map' ),
 				'loading'       => __( 'Načítám zařízení…', 'wp-places-map' ),

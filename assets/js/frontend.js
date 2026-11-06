@@ -510,6 +510,19 @@
 		// One icon per colour/glyph pair; places without their own use the brand pin.
 		const iconCache = {};
 		function iconFor(f) {
+			// A place may ship a complete pin image (e.g. a logo pin) instead of colour + glyph.
+			if (f.marker_icon) {
+				const sz = Array.isArray(f.marker_icon_size) ? f.marker_icon_size : [34, 44];
+				const k = 'img|' + f.marker_icon;
+				if (!iconCache[k]) {
+					iconCache[k] = {
+						url: f.marker_icon,
+						scaledSize: new google.maps.Size(+sz[0], +sz[1]),
+						anchor: new google.maps.Point(+sz[0] / 2, +sz[1]),
+					};
+				}
+				return iconCache[k];
+			}
 			const color = hexToRgbTriplet(f.marker_color) ? f.marker_color : config.brandColor;
 			const glyph = f.marker_glyph || '';
 			const key = color + '|' + glyph;
@@ -571,10 +584,13 @@
 		let allRegions = null; // { slug: { name, polys: [google.maps.Polygon] } }
 		let regionCounts = {};
 		let markers = [];
-		let cluster = null;
+		// One MarkerClusterer per cluster group (see renderMarkers); a single entry
+		// for maps whose places carry no `cluster_group`.
+		let clusters = [];
 		let activeFilter = config.typeFilter || '';
 		let activeRegionFilter = '';
 		let activeQuery = '';
+		let activeMatch = null; // { field: value } exact (diacritic-insensitive) matches, set from outside
 		let selectedFeature = null; // map.data feature currently active
 		let haloOverlays = [];      // WPPMHalo[] anchored to current cluster positions
 		let glowSchedulerStarted = false;
@@ -647,14 +663,16 @@
 		function syncHalos() {
 			haloOverlays.forEach((h) => h.setMap(null));
 			haloOverlays = [];
-			if (!cluster || !cluster.clusters) return;
-			cluster.clusters.forEach((c) => {
-				if (!c || !c.position) return;
-				const count = c.count || (c.markers ? c.markers.length : 0);
-				if (count <= 1) return;
-				const halo = new WPPMHalo(clusterIconPosition(c), clusterSizeFor(count));
-				halo.setMap(map);
-				haloOverlays.push(halo);
+			clusters.forEach((cluster) => {
+				if (!cluster || !cluster.clusters) return;
+				cluster.clusters.forEach((c) => {
+					if (!c || !c.position) return;
+					const count = c.count || (c.markers ? c.markers.length : 0);
+					if (count <= 1) return;
+					const halo = new WPPMHalo(clusterIconPosition(c), clusterSizeFor(count));
+					halo.setMap(map);
+					haloOverlays.push(halo);
+				});
 			});
 		}
 
@@ -742,12 +760,7 @@
 				'<button type="button" class="wppm-region-bar-clear" aria-label="' + escapeHtmlSafe(config.i18n.clearRegion) + '">×</button>';
 			regionBar.querySelector('.wppm-region-bar-name').textContent = name;
 			regionBar.querySelector('.wppm-region-bar-clear').addEventListener('click', function () {
-				applyFilter(activeFilter, '');
-				renderRegionBar('', '');
-				clearSelectedRegion();
-				// Always restore the CZ-wide configured view when the user clears a region.
-				map.setCenter(config.center);
-				map.setZoom(config.zoom);
+				setRegion('');
 			});
 		}
 
@@ -765,10 +778,8 @@
 		}
 
 		function clearMarkers() {
-			if (cluster) {
-				cluster.clearMarkers();
-				cluster = null;
-			}
+			clusters.forEach((c) => c.clearMarkers());
+			clusters = [];
 			haloOverlays.forEach((h) => h.setMap(null));
 			haloOverlays = [];
 			markers.forEach((m) => m.setMap(null));
@@ -778,6 +789,11 @@
 		function renderMarkers(list) {
 			clearMarkers();
 
+			// Places that set `cluster_group` cluster only with their own group, in the
+			// group's marker colour — otherwise a bubble counts e.g. practices and
+			// collection centres together under one colour. Without groups everything
+			// shares one clusterer, as before.
+			const groups = {};
 			list.forEach((f) => {
 				const marker = new google.maps.Marker({
 					position: { lat: f.lat, lng: f.lng },
@@ -787,6 +803,16 @@
 				});
 				marker.addListener('click', () => openDetail(f));
 				markers.push(marker);
+				const key = f.cluster_group ? String(f.cluster_group) : '';
+				if (!groups[key]) {
+					groups[key] = {
+						markers: [],
+						color: key && hexToRgbTriplet(f.marker_color) ? f.marker_color : config.clusterColor,
+						type: f.type || '',
+					};
+				}
+				if ((f.type || '') !== groups[key].type) groups[key].type = null; // mixed types
+				groups[key].markers.push(marker);
 			});
 
 			// Clustering is disabled when a region is the active filter. Inside a kraj the
@@ -797,38 +823,44 @@
 			// inconsistent.)
 			const allowCluster = config.cluster && !activeRegionFilter;
 			if (allowCluster && window.markerClusterer && markers.length > 1) {
-				cluster = new window.markerClusterer.MarkerClusterer({
-					map,
-					markers,
-					renderer: clusterRendererFactory(config.clusterColor, () => allRegions),
-					// When a cluster bubble visually covers a small kraj (Praha is the obvious
-					// case — at zoom 7 the 56px bubble is wider than the polygon), clicking
-					// the bubble should drill into that kraj rather than zoom-to-fit two pins
-					// half a km apart. We do the lookup against region polygons; if the cluster
-					// centre lies inside one, activateRegion handles the rest.
-					onClusterClick: (_evt, c, m) => {
-						const pos = c && c.position;
-						if (pos && allRegions && google.maps.geometry && google.maps.geometry.poly) {
-							for (const slug in allRegions) {
-								if (!Object.prototype.hasOwnProperty.call(allRegions, slug)) continue;
-								const polys = allRegions[slug].polys;
-								for (let i = 0; i < polys.length; i++) {
-									if (google.maps.geometry.poly.containsLocation(pos, polys[i])) {
-										activateRegion(slug);
-										return;
+				Object.keys(groups).forEach((key) => {
+					const group = groups[key];
+					const cluster = new window.markerClusterer.MarkerClusterer({
+						map,
+						markers: group.markers,
+						renderer: clusterRendererFactory(group.color, () => allRegions),
+						// When a cluster bubble visually covers a small kraj (Praha is the obvious
+						// case — at zoom 7 the 56px bubble is wider than the polygon), clicking
+						// the bubble should drill into that kraj rather than zoom-to-fit two pins
+						// half a km apart. We do the lookup against region polygons; if the cluster
+						// centre lies inside one, activateRegion handles the rest.
+						onClusterClick: (_evt, c, m) => {
+							const pos = c && c.position;
+							if (pos && allRegions && google.maps.geometry && google.maps.geometry.poly) {
+								for (const slug in allRegions) {
+									if (!Object.prototype.hasOwnProperty.call(allRegions, slug)) continue;
+									const polys = allRegions[slug].polys;
+									for (let i = 0; i < polys.length; i++) {
+										if (google.maps.geometry.poly.containsLocation(pos, polys[i])) {
+											// A grouped bubble drills into its own type only, so
+											// the kraj does not suddenly show the other kind too.
+											activateRegion(slug, key && group.type ? group.type : null);
+											return;
+										}
 									}
 								}
 							}
-						}
-						// Cluster outside any known polygon (shouldn't happen on CZ data but
-						// keep MarkerClusterer's default fallback for safety).
-						if (c && c.bounds) m.fitBounds(c.bounds);
-					},
+							// Cluster outside any known polygon (shouldn't happen on CZ data but
+							// keep MarkerClusterer's default fallback for safety).
+							if (c && c.bounds) m.fitBounds(c.bounds);
+						},
+					});
+					// Re-sync halo positions every time MarkerClusterer recomputes (zoom/pan).
+					try {
+						cluster.addListener('clusteringend', syncHalos);
+					} catch (e) { /* older MC versions: best-effort */ }
+					clusters.push(cluster);
 				});
-				// Re-sync halo positions every time MarkerClusterer recomputes (zoom/pan).
-				try {
-					cluster.addListener('clusteringend', syncHalos);
-				} catch (e) { /* older MC versions: best-effort */ }
 				// Initial sync — clusteringend doesn't always fire synchronously on construction.
 				setTimeout(syncHalos, 80);
 				startGlowSchedulers();
@@ -852,17 +884,87 @@
 				const q = normalize(query);
 				out = out.filter((f) => (f._haystack || '').indexOf(q) !== -1);
 			}
-			return out;
+			return out.filter(matchesActive);
+		}
+
+		function matchesActive(f) {
+			if (!activeMatch) return true;
+			for (const field in activeMatch) {
+				if (!Object.prototype.hasOwnProperty.call(activeMatch, field)) continue;
+				if (normalize(f[field]) !== normalize(activeMatch[field])) return false;
+			}
+			return true;
 		}
 
 		function applyFilter(typeSlug, regionSlug, query) {
 			activeFilter = typeSlug || '';
 			activeRegionFilter = regionSlug != null ? regionSlug : activeRegionFilter;
 			if (query != null) activeQuery = query;
-			renderMarkers(filterFacilities(activeFilter, activeRegionFilter, activeQuery));
+			const visible = filterFacilities(activeFilter, activeRegionFilter, activeQuery);
+			renderMarkers(visible);
 			refreshFilterPillCounts();
 			buildRegionBadges();
+			syncFilterButtons();
+			// Lets page code (legends, filter bars, lists) follow the map state.
+			wrap.dispatchEvent(new CustomEvent('wppm:change', {
+				bubbles: true,
+				detail: { type: activeFilter, region: activeRegionFilter, query: activeQuery, match: activeMatch, count: visible.length },
+			}));
+			return visible;
 		}
+
+		function syncFilterButtons() {
+			wrap.querySelectorAll('.wppm-filter').forEach((b) => {
+				const on = (b.getAttribute('data-filter') || '') === activeFilter;
+				b.classList.toggle('is-active', on);
+				b.setAttribute('aria-selected', on ? 'true' : 'false');
+			});
+		}
+
+		// Region selection without the toggle behaviour of a polygon click:
+		// '' clears it and restores the configured view.
+		function setRegion(slug, typeSlug) {
+			const type = typeSlug != null ? typeSlug : activeFilter;
+			if (!slug || !allRegions || !allRegions[slug]) {
+				clearSelectedRegion();
+				renderRegionBar('', '');
+				applyFilter(type, '');
+				map.setCenter(config.center);
+				map.setZoom(config.zoom);
+				return;
+			}
+			if (activeRegionFilter === slug) {
+				applyFilter(type, slug);
+				return;
+			}
+			activateRegion(slug, type);
+		}
+
+		// External control: wrap.dispatchEvent(new CustomEvent('wppm:filter', { detail: {
+		//   type: 'slug' | '', region: 'kraj-slug' | '', query: 'text', match: { city: 'Brno' } | null } }))
+		// Keys left out keep their current value. With `match` set, the view fits the result.
+		wrap.addEventListener('wppm:filter', (e) => {
+			const d = e.detail || {};
+			const type = d.type != null ? d.type : activeFilter;
+			const hadMatch = !!activeMatch;
+			if (d.match !== undefined) activeMatch = d.match && Object.keys(d.match).length ? d.match : null;
+			if (hadMatch && !activeMatch && !d.region && !activeRegionFilter) {
+				map.setCenter(config.center);
+				map.setZoom(config.zoom);
+			}
+			if (d.query != null) activeQuery = d.query;
+			if (d.region !== undefined && d.region !== activeRegionFilter) {
+				setRegion(d.region || '', type);
+			} else {
+				applyFilter(type, activeRegionFilter);
+			}
+			if (d.match !== undefined && activeMatch && markers.length) {
+				const b = new google.maps.LatLngBounds();
+				markers.forEach((m) => b.extend(m.getPosition()));
+				map.fitBounds(b, 64);
+				if (markers.length === 1) google.maps.event.addListenerOnce(map, 'idle', () => map.setZoom(Math.min(map.getZoom(), 13)));
+			}
+		});
 
 		// Compute how many places remain *for each type* given the current region+query filters,
 		// then write those counts into the pill badges. So "Lékárna 3" becomes "Lékárna 0" when
@@ -870,6 +972,7 @@
 		function refreshFilterPillCounts() {
 			const baseFiltered = allFacilities.filter((f) => {
 				if (activeRegionFilter && f.region !== activeRegionFilter) return false;
+				if (!matchesActive(f)) return false;
 				if (activeQuery) {
 					const q = normalize(activeQuery);
 					if ((f._haystack || '').indexOf(q) === -1) return false;
@@ -897,10 +1000,6 @@
 		filterButtons.forEach((btn) => {
 			btn.addEventListener('click', () => {
 				const slug = btn.getAttribute('data-filter') || '';
-				filterButtons.forEach((b) => {
-					b.classList.toggle('is-active', b === btn);
-					b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
-				});
 				applyFilter(slug, activeRegionFilter, activeQuery);
 			});
 		});
@@ -1136,6 +1235,7 @@
 			const counts = {};
 			allFacilities.forEach((f) => {
 				if (activeFilter && f.type !== activeFilter) return;
+				if (!matchesActive(f)) return;
 				if (activeQuery) {
 					const q = normalize(activeQuery);
 					if ((f._haystack || '').indexOf(q) === -1) return;
@@ -1174,9 +1274,11 @@
 		}
 
 		// Shared logic between clicking the kraj polygon and clicking a count badge.
-		function activateRegion(slug) {
+		// typeSlug: optional type to switch to together with the region (null keeps the current one).
+		function activateRegion(slug, typeSlug) {
 			const region = allRegions[slug];
 			if (!region) return;
+			const type = typeSlug != null ? typeSlug : activeFilter;
 
 			// Locate the matching Data Layer feature so we can apply/clear the selected style.
 			let targetFeature = null;
@@ -1193,7 +1295,7 @@
 			}
 
 			clearSelectedRegion();
-			applyFilter(activeFilter, slug);
+			applyFilter(type, slug);
 			renderRegionBar(slug, region.name);
 			if (targetFeature) {
 				selectedFeature = targetFeature;
@@ -1220,6 +1322,9 @@
 			})
 			.then((data) => {
 				allFacilities = Array.isArray(data) ? data : [];
+				if (config.placeIds && config.placeIds.length) {
+					allFacilities = allFacilities.filter((f) => config.placeIds.indexOf(+f.id) !== -1);
+				}
 				// Pre-compute normalised haystack for fast diacritic-insensitive search.
 				allFacilities.forEach((f) => {
 					f._haystack = normalize([
@@ -1271,6 +1376,25 @@
 				} catch (err) {
 					showError(err);
 				}
+				// places="…": frame the chosen places instead of the configured view.
+				if (config.placeIds && config.placeIds.length && allFacilities.length) {
+					if (allFacilities.length === 1) {
+						map.setCenter({ lat: +allFacilities[0].lat, lng: +allFacilities[0].lng });
+					} else {
+						const b = new google.maps.LatLngBounds();
+						allFacilities.forEach((f) => b.extend({ lat: +f.lat, lng: +f.lng }));
+						map.fitBounds(b, 64);
+					}
+					config.center = map.getCenter().toJSON();
+				}
+				// Page code can build its own controls from the loaded places (with
+				// their polygon-assigned `region`). Also kept on the element for late listeners.
+				wrap.wppmPlaces = allFacilities;
+				wrap.wppmRegions = Object.keys(allRegions || {}).reduce((o, s) => { o[s] = allRegions[s].name; return o; }, {});
+				wrap.dispatchEvent(new CustomEvent('wppm:ready', {
+					bubbles: true,
+					detail: { places: allFacilities, regions: wrap.wppmRegions },
+				}));
 			})
 			.catch(showError);
 	}
